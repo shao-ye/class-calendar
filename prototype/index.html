@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>孩子课程记录日历 · 原型</title>
+<style>
+/* ===================== 全局基础样式 ===================== */
+:root{
+  --bg:#f4f5f7;            /* 页面背景 */
+  --card:#ffffff;          /* 卡片背景 */
+  --text:#1f2329;          /* 主文字 */
+  --text-sub:#8a8f99;      /* 次要文字 */
+  --line:#ebedf0;          /* 分割线 */
+  --primary:#3b6cff;       /* 主题色 */
+  --primary-soft:#eaf0ff;  /* 主题浅色 */
+  --shadow:0 6px 24px rgba(0,0,0,.08);
+  --radius:16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:#dfe3ea;color:var(--text);}
+button{font-family:inherit;cursor:pointer;border:none;background:none;}
+input,textarea,select{font-family:inherit;}
+
+/* 手机外框：居中模拟手机，桌面也能看 */
+.phone{
+  position:relative;max-width:420px;min-height:100vh;margin:0 auto;background:var(--bg);
+  display:flex;flex-direction:column;box-shadow:0 0 40px rgba(0,0,0,.12);overflow:hidden;
+}
+
+/* ===================== 顶部栏 ===================== */
+.topbar{
+  background:var(--card);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;
+}
+.topbar .title{font-size:18px;font-weight:700;}
+.topbar .sub{font-size:12px;color:var(--text-sub);margin-top:2px;}
+.seg{display:flex;background:var(--bg);border-radius:10px;padding:3px;}
+.seg button{padding:6px 14px;border-radius:8px;font-size:13px;color:var(--text-sub);font-weight:600;}
+.seg button.on{background:var(--card);color:var(--primary);box-shadow:0 1px 4px rgba(0,0,0,.08);}
+
+/* ===================== 内容滚动区 ===================== */
+.body{flex:1;overflow-y:auto;padding-bottom:74px;}
+.page{display:none;}
+.page.on{display:block;}
+
+/* ===================== 日历 ===================== */
+.cal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 6px;}
+.cal-head .mon{font-size:17px;font-weight:700;}
+.cal-nav button{width:32px;height:32px;border-radius:8px;background:var(--card);font-size:16px;color:var(--text-sub);box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.cal-nav{display:flex;gap:8px;align-items:center;}
+.today-btn{font-size:12px;color:var(--primary);font-weight:600;padding:6px 10px;background:var(--primary-soft);border-radius:8px;}
+.weekrow{display:grid;grid-template-columns:repeat(7,1fr);padding:6px 8px 0;}
+.weekrow span{text-align:center;font-size:12px;color:var(--text-sub);font-weight:600;}
+.weekrow span.we{color:#f0876b;}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:6px 8px 12px;}
+.cell{
+  background:var(--card);border-radius:10px;min-height:62px;padding:5px 4px;display:flex;flex-direction:column;
+  align-items:stretch;position:relative;overflow:hidden;
+}
+.cell.out{background:transparent;}
+.cell.out .dnum{color:#c8ccd4;}
+.cell .dnum{font-size:12px;font-weight:600;text-align:center;margin-bottom:2px;color:var(--text);}
+.cell.today .dnum{background:var(--primary);color:#fff;border-radius:50%;width:20px;height:20px;line-height:20px;margin:0 auto 2px;}
+.tag{font-size:10px;line-height:1.4;color:#fff;border-radius:4px;padding:1px 4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tag.plan{background:transparent !important;border:1px dashed;padding:0 3px;}
+.more{font-size:9px;color:var(--text-sub);text-align:center;}
+.cell .dot-leave{position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;background:#f0876b;}
+.cell.holiday{background:#fff6f4;}
+.cell.holiday.out{background:transparent;}
+.cell .hol{position:absolute;top:4px;left:4px;font-size:9px;color:#f0876b;font-weight:700;}
+/* 日历图例 */
+.legend{display:flex;flex-wrap:wrap;gap:14px;padding:2px 14px 14px;font-size:11px;color:var(--text-sub);}
+.legend span{display:flex;align-items:center;gap:5px;}
+.legend i{width:14px;height:10px;border-radius:3px;display:inline-block;}
+.legend .lg-solid{background:var(--primary);}
+.legend .lg-dash{border:1px dashed var(--primary);}
+.legend .lg-hol{background:#fff6f4;border:1px solid #f0876b;color:#f0876b;}
+/* 上课星期多选 */
+.wd-pick{display:flex;gap:6px;}
+.wd{flex:1;text-align:center;padding:9px 0;border-radius:9px;background:var(--card);border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--text-sub);cursor:pointer;}
+.wd.on{background:var(--primary);border-color:var(--primary);color:#fff;}
+
+/* 周视图 */
+.weekview{padding:8px 12px;}
+.wv-day{background:var(--card);border-radius:12px;padding:10px 12px;margin-bottom:8px;}
+.wv-day .d{font-size:13px;font-weight:700;margin-bottom:6px;}
+.wv-day .d small{color:var(--text-sub);font-weight:500;margin-left:6px;}
+.wv-empty{font-size:12px;color:var(--text-sub);}
+.wv-item{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;}
+.wv-item .bar{width:4px;height:24px;border-radius:3px;}
+.wv-item .ct{font-weight:600;}
+.wv-item .tm{margin-left:auto;color:var(--text-sub);font-size:12px;}
+
+/* ===================== 统计 ===================== */
+.section{background:var(--card);margin:12px;border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);}
+.section h3{margin:0 0 14px;font-size:15px;}
+.range{display:flex;gap:8px;margin:12px 12px 0;}
+.range button{flex:1;padding:9px;border-radius:10px;background:var(--card);font-size:13px;font-weight:600;color:var(--text-sub);box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.range button.on{background:var(--primary);color:#fff;}
+.stat-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px;}
+.stat-card{background:var(--card);border-radius:14px;padding:14px 8px;text-align:center;box-shadow:var(--shadow);}
+.stat-card .n{font-size:22px;font-weight:800;color:var(--primary);}
+.stat-card .l{font-size:11px;color:var(--text-sub);margin-top:4px;}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.bar-row .name{width:54px;font-size:12px;font-weight:600;}
+.bar-track{flex:1;height:18px;background:var(--bg);border-radius:9px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:9px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;color:#fff;font-size:10px;font-weight:700;}
+
+/* ===================== 课程库 ===================== */
+.course-item{display:flex;align-items:center;gap:12px;background:var(--card);margin:8px 12px;padding:14px;border-radius:14px;box-shadow:var(--shadow);}
+.course-item .swatch{width:14px;height:14px;border-radius:4px;flex-shrink:0;}
+.course-item .nm{font-weight:600;font-size:15px;}
+.course-item .cnt{font-size:12px;color:var(--text-sub);margin-left:auto;}
+.course-item .edit{color:var(--text-sub);font-size:18px;padding:4px 8px;}
+.badge-ko{font-size:10px;color:#d99214;background:#fff4e0;padding:1px 6px;border-radius:6px;font-weight:600;vertical-align:middle;margin-left:4px;}
+/* 课时进度条 */
+.hours{margin-top:7px;}
+.hb-track{height:7px;background:var(--bg);border-radius:4px;overflow:hidden;}
+.hb-fill{height:100%;border-radius:4px;background:#3b6cff;}
+.hb-fill.low{background:#e8694a;}
+.hb-label{font-size:11px;color:var(--primary);margin-top:4px;font-weight:600;}
+.hb-label.low{color:#e8694a;}
+/* 开关 */
+.switch{width:46px;height:26px;border-radius:13px;background:#d4d8e0;position:relative;transition:.2s;flex-shrink:0;}
+.switch.on{background:var(--primary);}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;}
+.switch.on::after{left:23px;}
+/* 步进器（扣课时） */
+.step{display:flex;align-items:center;gap:14px;}
+.step button{width:34px;height:34px;border-radius:9px;background:var(--bg);font-size:20px;font-weight:700;color:var(--primary);}
+.step span#deductVal{font-size:16px;font-weight:700;min-width:28px;text-align:center;}
+/* 颜色选择 */
+.color-pick{display:flex;gap:10px;flex-wrap:wrap;}
+.color-pick .co{width:30px;height:30px;border-radius:50%;cursor:pointer;border:3px solid transparent;}
+.color-pick .co.on{border-color:#1f2329;}
+/* 课时包时间线 */
+.pkg{background:var(--card);border-radius:12px;padding:12px 14px;margin-bottom:8px;border:1px solid var(--line);}
+.pkg.active{border-color:var(--primary);}
+.pkg .pt{display:flex;align-items:center;justify-content:space-between;}
+.pkg .pt b{font-size:14px;}
+.pkg .pt>span{display:inline-flex;align-items:center;gap:8px;}
+.pkg-adj{font-size:12px;color:var(--primary);font-weight:600;background:var(--primary-soft);padding:2px 9px;border-radius:7px;}
+.pkg .ptag{font-size:10px;padding:1px 7px;border-radius:6px;}
+.pkg input[type=number]{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:var(--card);outline:none;}
+.pkg input[type=number]:focus{border-color:var(--primary);}
+.ptag-active{background:var(--primary-soft);color:var(--primary);}
+.ptag-done{background:var(--bg);color:var(--text-sub);}
+.pkg .pinfo{font-size:12px;color:var(--text-sub);margin-top:6px;}
+
+/* ===================== 底部导航 ===================== */
+.tabbar{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;z-index:30;}
+.tabbar button{flex:1;padding:9px 0 10px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--text-sub);font-size:11px;}
+.tabbar button.on{color:var(--primary);}
+.tabbar .ic{font-size:20px;line-height:1;}
+
+/* ===================== 浮动新增按钮 ===================== */
+.fab{position:absolute;right:18px;bottom:88px;width:54px;height:54px;border-radius:50%;background:var(--primary);color:#fff;font-size:30px;box-shadow:0 8px 20px rgba(59,108,255,.4);z-index:25;display:flex;align-items:center;justify-content:center;}
+
+/* ===================== 底部抽屉（当日记录） ===================== */
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:40;display:none;}
+.mask.on{display:block;}
+.sheet{
+  position:absolute;left:50%;transform:translateX(-50%) translateY(100%);bottom:0;width:100%;max-width:420px;
+  background:var(--bg);border-radius:20px 20px 0 0;z-index:50;transition:transform .28s ease;max-height:90vh;overflow-y:auto;
+}
+.sheet.on{transform:translateX(-50%) translateY(0);}
+.sheet-head{position:sticky;top:0;background:var(--bg);padding:16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);}
+.sheet-head .dt{font-size:16px;font-weight:700;}
+.sheet-head .dt small{color:var(--text-sub);font-weight:500;margin-left:6px;font-size:12px;}
+.sheet-head .close{font-size:22px;color:var(--text-sub);}
+.sheet-body{padding:12px 16px 24px;}
+
+/* 当日记录卡片 */
+.rec{background:var(--card);border-radius:14px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 6px rgba(0,0,0,.05);position:relative;}
+.rec .top{display:flex;align-items:center;gap:8px;}
+.rec .bar{width:4px;height:20px;border-radius:3px;}
+.rec .nm{font-weight:700;font-size:15px;}
+.rec .st{font-size:11px;padding:1px 7px;border-radius:6px;margin-left:4px;}
+.st-attended{background:#e6f7ee;color:#1aa463;}
+.st-leave{background:#fdecea;color:#e8694a;}
+.st-reschedule{background:#fff4e0;color:#d99214;}
+.rec .meta{font-size:12px;color:var(--text-sub);margin-top:6px;display:flex;gap:14px;}
+.rec .note{font-size:13px;margin-top:8px;color:#4b5159;line-height:1.5;}
+.rec .photos{display:flex;gap:6px;margin-top:8px;}
+.rec .photos .ph{width:54px;height:54px;border-radius:8px;background:linear-gradient(135deg,#cdd6ff,#e9d5ff);display:flex;align-items:center;justify-content:center;font-size:18px;}
+.rec .ops{position:absolute;top:12px;right:12px;display:flex;gap:10px;}
+.rec .ops button{font-size:13px;color:var(--text-sub);}
+.add-rec{width:100%;padding:14px;border-radius:14px;background:var(--primary-soft);color:var(--primary);font-weight:700;font-size:15px;margin-top:4px;}
+
+/* ===================== 表单（新增/编辑记录） ===================== */
+.form .field{margin-bottom:16px;}
+.form label{display:block;font-size:13px;font-weight:600;margin-bottom:8px;}
+.form input[type=text],.form input[type=time],.form textarea{
+  width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:var(--card);outline:none;
+}
+.form input:focus,.form textarea:focus{border-color:var(--primary);}
+.form .row{display:flex;gap:10px;}
+.form .row .field{flex:1;}
+.dur-hint{font-size:12px;color:var(--primary);margin-top:6px;font-weight:600;}
+
+/* 下拉建值组件 */
+.combo{position:relative;}
+.combo-list{position:absolute;left:0;right:0;top:48px;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);max-height:220px;overflow-y:auto;z-index:5;display:none;}
+.combo-list.on{display:block;}
+.combo-opt{display:flex;align-items:center;gap:9px;padding:11px 12px;font-size:14px;}
+.combo-opt:hover,.combo-opt.hl{background:var(--bg);}
+.combo-opt .sw{width:12px;height:12px;border-radius:3px;}
+.combo-create{color:var(--primary);font-weight:700;border-top:1px solid var(--line);}
+.combo-create .plus{font-size:16px;}
+
+/* 状态选择 */
+.status-pick{display:flex;gap:8px;}
+.status-pick button{flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--card);color:var(--text-sub);}
+.status-pick button.on{border-color:var(--primary);color:var(--primary);background:var(--primary-soft);}
+
+/* 照片上传 */
+.photo-pick{display:flex;gap:8px;flex-wrap:wrap;}
+.photo-pick .added{width:64px;height:64px;border-radius:10px;background:linear-gradient(135deg,#cdd6ff,#e9d5ff);display:flex;align-items:center;justify-content:center;font-size:20px;}
+.photo-pick .add{width:64px;height:64px;border-radius:10px;border:1.5px dashed #c2c8d2;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-sub);font-size:11px;gap:2px;}
+.photo-pick .add .p{font-size:22px;}
+
+.form-actions{display:flex;gap:10px;margin-top:8px;}
+.btn-primary{flex:2;padding:13px;border-radius:12px;background:var(--primary);color:#fff;font-weight:700;font-size:15px;}
+.btn-ghost{flex:1;padding:13px;border-radius:12px;background:var(--card);color:var(--text-sub);font-weight:600;border:1px solid var(--line);}
+
+/* ===================== 登录页 ===================== */
+.login{position:absolute;inset:0;z-index:60;background:linear-gradient(160deg,#3b6cff,#6b8cff);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;}
+.login.hide{display:none;}
+.login .logo{font-size:54px;margin-bottom:10px;}
+.login h1{color:#fff;font-size:22px;margin:0 0 4px;}
+.login p{color:rgba(255,255,255,.85);font-size:13px;margin:0 0 30px;}
+.login .box{background:#fff;border-radius:18px;padding:22px;width:100%;box-shadow:var(--shadow);}
+.login .box input{width:100%;padding:13px;border:1px solid var(--line);border-radius:11px;font-size:15px;margin-bottom:12px;outline:none;}
+.login .box input:focus{border-color:var(--primary);}
+.login .box button{width:100%;padding:13px;border-radius:11px;background:var(--primary);color:#fff;font-weight:700;font-size:15px;}
+.login .tip{color:rgba(255,255,255,.8);font-size:12px;margin-top:18px;text-align:center;}
+
+/* 提示气泡 */
+.toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#fff;font-size:13px;padding:9px 16px;border-radius:20px;z-index:80;opacity:0;transition:opacity .25s;pointer-events:none;}
+.toast.on{opacity:1;}
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- ============ 登录页 ============ -->
+  <div class="login" id="login">
+    <div class="logo">📚</div>
+    <h1>课程小日历</h1>
+    <p>记录孩子每天上了什么课</p>
+    <div class="box">
+      <input type="text" id="lg-user" placeholder="用户名" value="parent">
+      <input type="password" id="lg-pwd" placeholder="密码" value="123456">
+      <button onclick="doLogin()">登录</button>
+    </div>
+    <div class="tip">原型演示：直接点登录即可进入</div>
+  </div>
+
+  <!-- ============ 顶部栏 ============ -->
+  <div class="topbar">
+    <div>
+      <div class="title" id="topTitle">课程日历</div>
+      <div class="sub" id="topSub">宝贝的成长记录</div>
+    </div>
+    <div class="seg" id="viewSeg" style="display:none;">
+      <button class="on" onclick="switchCalView('month')" id="segMonth">月</button>
+      <button onclick="switchCalView('week')" id="segWeek">周</button>
+    </div>
+  </div>
+
+  <!-- ============ 内容区 ============ -->
+  <div class="body">
+
+    <!-- 日历页 -->
+    <div class="page on" id="page-cal">
+      <div class="cal-head">
+        <div class="mon" id="monLabel">2026年6月</div>
+        <div class="cal-nav">
+          <button onclick="changeMonth(-1)">‹</button>
+          <button class="today-btn" onclick="goToday()">今天</button>
+          <button onclick="changeMonth(1)">›</button>
+        </div>
+      </div>
+      <!-- 月视图 -->
+      <div id="monthView">
+        <div class="weekrow">
+          <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span class="we">六</span><span class="we">日</span>
+        </div>
+        <div class="grid" id="calGrid"></div>
+        <div class="legend">
+          <span><i class="lg-solid"></i>已记录</span>
+          <span><i class="lg-dash"></i>计划课（按排课自动预排）</span>
+          <span><i class="lg-hol"></i>法定假日</span>
+        </div>
+      </div>
+      <!-- 周视图 -->
+      <div id="weekView" class="weekview" style="display:none;"></div>
+    </div>
+
+    <!-- 统计页 -->
+    <div class="page" id="page-stat">
+      <div class="range">
+        <button onclick="setRange(this,'week')">本周</button>
+        <button class="on" onclick="setRange(this,'month')">本月</button>
+        <button onclick="setRange(this,'custom')">自定义</button>
+      </div>
+      <div class="stat-cards">
+        <div class="stat-card"><div class="n">18</div><div class="l">上课天数</div></div>
+        <div class="stat-card"><div class="n">32</div><div class="l">总课时数</div></div>
+        <div class="stat-card"><div class="n">46h</div><div class="l">累计时长</div></div>
+      </div>
+      <div class="section">
+        <h3>各课程次数</h3>
+        <div id="statBars"></div>
+      </div>
+      <div class="section">
+        <h3>出勤情况</h3>
+        <div class="bar-row"><div class="name">到课</div><div class="bar-track"><div class="bar-fill" style="width:84%;background:#1aa463;">84%</div></div></div>
+        <div class="bar-row"><div class="name">请假</div><div class="bar-track"><div class="bar-fill" style="width:10%;background:#e8694a;">10%</div></div></div>
+        <div class="bar-row"><div class="name">调课</div><div class="bar-track"><div class="bar-fill" style="width:6%;background:#d99214;">6%</div></div></div>
+      </div>
+      <div class="section">
+        <h3>花费统计 <span style="font-size:12px;color:var(--text-sub);font-weight:400;">· 仅课外班</span></h3>
+        <div id="spendSummary"></div>
+        <div id="spendBars"></div>
+      </div>
+    </div>
+
+    <!-- 课程库页 -->
+    <div class="page" id="page-course">
+      <div id="courseList"></div>
+      <button class="add-rec" style="margin:8px 12px;width:calc(100% - 24px);" onclick="openCourseEdit(0)">＋ 新建课程</button>
+    </div>
+
+    <!-- 我的页 -->
+    <div class="page" id="page-me">
+      <div class="section" style="text-align:center;">
+        <div style="font-size:46px;">👨‍👧</div>
+        <div style="font-weight:700;font-size:17px;margin-top:6px;">parent</div>
+        <div style="font-size:12px;color:var(--text-sub);margin-top:2px;">单用户模式（一期）</div>
+      </div>
+      <div class="section" style="padding:0;">
+        <div style="padding:15px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;" onclick="toast('原型演示：导出本月记录')">📤 导出记录（CSV）<span style="color:var(--text-sub);">›</span></div>
+        <div style="padding:15px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;" onclick="toast('二期功能：开放多用户注册')">👥 多用户管理<span style="color:var(--text-sub);">二期 ›</span></div>
+        <div style="padding:15px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;" onclick="toast('远期功能：绑定微信登录')">💬 绑定微信登录<span style="color:var(--text-sub);">远期 ›</span></div>
+        <div style="padding:15px 16px;display:flex;justify-content:space-between;color:#e8694a;" onclick="logout()">退出登录<span>›</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 浮动新增按钮（仅日历页显示） -->
+  <button class="fab" id="fab" onclick="openSheet(todayKey)">＋</button>
+
+  <!-- ============ 底部导航 ============ -->
+  <div class="tabbar">
+    <button class="on" onclick="switchTab('cal',this)"><span class="ic">📅</span>日历</button>
+    <button onclick="switchTab('stat',this)"><span class="ic">📊</span>统计</button>
+    <button onclick="switchTab('course',this)"><span class="ic">🏷️</span>课程</button>
+    <button onclick="switchTab('me',this)"><span class="ic">👤</span>我的</button>
+  </div>
+
+</div>
+
+<!-- ============ 当日记录抽屉 ============ -->
+<div class="mask" id="mask" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-head">
+    <div class="dt" id="sheetDate">6月16日 <small>星期二</small></div>
+    <button class="close" onclick="closeSheet()">✕</button>
+  </div>
+  <div class="sheet-body" id="sheetBody"></div>
+</div>
+
+<!-- ============ 课程编辑抽屉 ============ -->
+<div class="mask" id="courseMask" onclick="closeCourseEdit()"></div>
+<div class="sheet" id="courseSheet">
+  <div class="sheet-head">
+    <div class="dt" id="courseSheetTitle">编辑课程</div>
+    <button class="close" onclick="closeCourseEdit()">✕</button>
+  </div>
+  <div class="sheet-body" id="courseSheetBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   原型数据与逻辑（纯前端模拟，无后端）
+   ============================================================ */
+
+// 固定“今天”为 2026-06-16，便于演示
+const TODAY = new Date(2026,5,16);
+const todayKey = ymd(TODAY);
+let viewYear = 2026, viewMonth = 5;   // 当前日历展示的年/月（0-based 月）
+let calView = 'month';                // month | week
+
+// 课程库：名称/颜色/默认时间段 + 是否统计课时(trackHours) + 课时包列表(packages)
+// packages：循环统计，每个包含 总课时total、购买日期date、已用used、状态status(active生效/done已用完)
+const courses = [
+  // weekdays：上课星期(1=周一…7=周日，可多选)；skipHoliday：是否休法定假日
+  {id:1,name:'钢琴',color:'#3b6cff',defaultStart:'16:00',defaultDuration:60,weekdays:[3],skipHoliday:true,trackHours:true,packages:[
+    {id:1,total:30,date:'2026-02-10',amount:4500,used:30,status:'done'},
+    {id:2,total:30,date:'2026-05-20',amount:4800,used:27,status:'active'}]},
+  {id:2,name:'英语',color:'#1aa463',defaultStart:'18:30',defaultDuration:60,weekdays:[2,4],skipHoliday:true,trackHours:true,packages:[
+    {id:1,total:20,date:'2026-03-01',amount:3000,used:20,status:'done'},
+    {id:2,total:20,date:'2026-06-01',amount:3200,used:8,status:'active'}]},
+  {id:3,name:'游泳',color:'#22b8cf',defaultStart:'15:00',defaultDuration:60,weekdays:[6],skipHoliday:false,trackHours:true,packages:[
+    {id:1,total:16,date:'2026-05-05',amount:2400,used:4,status:'active'}]},
+  {id:4,name:'围棋',color:'#d99214',defaultStart:'17:00',defaultDuration:60,weekdays:[],skipHoliday:true,trackHours:false,packages:[]},
+  {id:5,name:'画画',color:'#e8694a',defaultStart:'19:00',defaultDuration:60,weekdays:[],skipHoliday:false,trackHours:false,packages:[]},
+  {id:6,name:'舞蹈',color:'#b06bff',defaultStart:'17:30',defaultDuration:60,weekdays:[],skipHoliday:true,trackHours:false,packages:[]},
+];
+// 法定假日（演示：硬编码2026年端午假期；真实应接入节假日表/接口，含调休工作日）
+const holidays={'2026-06-19':'端午','2026-06-20':'端午','2026-06-21':'端午','2026-10-01':'国庆','2026-10-02':'国庆','2026-10-03':'国庆'};
+function isHoliday(key){return !!holidays[key];}
+const courseCount = {1:6,2:8,3:4,4:5,5:3,6:6}; // 演示用：统计次数
+
+// 上课记录：key 为日期，值为该天的记录数组
+const records = {
+  '2026-06-02':[{cid:1,start:'16:00',end:'17:00',status:'attended',note:'练习了新曲子《小星星变奏曲》',photos:1}],
+  '2026-06-03':[{cid:2,start:'18:30',end:'19:30',status:'attended',note:'',photos:0}],
+  '2026-06-05':[{cid:3,start:'15:00',end:'16:00',status:'attended',note:'蛙泳进步明显',photos:2}],
+  '2026-06-09':[{cid:4,start:'17:00',end:'18:00',status:'leave',note:'感冒请假',photos:0}],
+  '2026-06-10':[{cid:1,start:'16:00',end:'17:00',status:'attended',note:'',photos:0},{cid:5,start:'19:00',end:'20:00',status:'attended',note:'画了一幅海底世界',photos:1}],
+  '2026-06-12':[{cid:2,start:'18:30',end:'19:30',status:'reschedule',note:'调到周六',photos:0}],
+  '2026-06-16':[{cid:6,start:'17:30',end:'18:30',status:'attended',note:'排练六一节目',photos:1},{cid:2,start:'19:00',end:'20:00',status:'attended',note:'',photos:0}],
+  '2026-06-18':[{cid:3,start:'15:00',end:'16:00',status:'attended',note:'',photos:0}],
+  '2026-06-23':[{cid:1,start:'16:00',end:'17:00',status:'attended',note:'',photos:0}],
+};
+const statusText = {attended:'到课',leave:'请假',reschedule:'调课'};
+
+/* ---------- 工具函数 ---------- */
+// 把日期对象格式化为 YYYY-MM-DD
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+// 根据课程 id 取课程对象
+function getCourse(id){return courses.find(c=>c.id===id);}
+// 计算时长（分钟）
+function durMin(s,e){if(!s||!e)return 0;const[a,b]=s.split(':').map(Number),[c,d]=e.split(':').map(Number);return (c*60+d)-(a*60+b);}
+// 开始时间 + 时长 → 结束时间（HH:MM）
+function addMin(start,min){const[h,m]=start.split(':').map(Number);let t=((h*60+m+min)%1440+1440)%1440;return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');}
+// 取课程当前生效的课时包（最近一个 active）
+function activePkg(c){return (c.packages||[]).find(p=>p.status==='active');}
+// 当前剩余课时（无生效包返回 null）
+function remainHours(c){const p=activePkg(c);return p?p.total-p.used:null;}
+
+// 按课程的排课规则，从今天起投影出未来的上课日期
+// - 统计课时的课：投影“剩余课时”节；不统计课时的课：投影固定天数(演示60天内)
+// - skipHoliday=true 时跳过法定假日（顺延到下一个符合星期的日子）
+function plannedDatesForCourse(c){
+  if(!c.weekdays||c.weekdays.length===0)return [];
+  const cnt=c.trackHours?Math.floor(remainHours(c)||0):30;
+  if(cnt<=0)return [];
+  const dates=[];let d=new Date(TODAY);let guard=0;
+  while(dates.length<cnt&&guard<500){
+    guard++;
+    const wd=d.getDay()===0?7:d.getDay();
+    const key=ymd(d);
+    if(c.weekdays.includes(wd)&&!(c.skipHoliday&&isHoliday(key)))dates.push(key);
+    d.setDate(d.getDate()+1);
+  }
+  return dates;
+}
+// 汇总当前展示月的“计划课”：key -> [课程id]；已有实际记录的当天该课不再重复显示
+function buildPlanned(){
+  const map={};
+  courses.forEach(c=>{
+    plannedDatesForCourse(c).forEach(key=>{
+      const dt=new Date(key);
+      if(dt.getFullYear()!==viewYear||dt.getMonth()!==viewMonth)return;
+      if((records[key]||[]).some(r=>r.cid===c.id))return;
+      (map[key]=map[key]||[]).push(c.id);
+    });
+  });
+  return map;
+}
+
+/* ---------- 登录 ---------- */
+function doLogin(){
+  document.getElementById('login').classList.add('hide');
+  document.getElementById('viewSeg').style.display='flex';
+}
+function logout(){
+  document.getElementById('login').classList.remove('hide');
+  document.getElementById('viewSeg').style.display='none';
+}
+
+/* ---------- 渲染月视图日历 ---------- */
+function renderCalendar(){
+  document.getElementById('monLabel').textContent = viewYear+'年'+(viewMonth+1)+'月';
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML='';
+  const first = new Date(viewYear,viewMonth,1);
+  // 周一为一周起点：把周日(0)换算成 7
+  let startDay = first.getDay(); startDay = startDay===0?7:startDay;
+  const daysInMonth = new Date(viewYear,viewMonth+1,0).getDate();
+  // 前置空白（上月占位）
+  for(let i=1;i<startDay;i++){
+    const c=document.createElement('div');c.className='cell out';grid.appendChild(c);
+  }
+  const planned=buildPlanned();   // 当前月的计划课
+  // 本月日期
+  for(let d=1;d<=daysInMonth;d++){
+    const key=ymd(new Date(viewYear,viewMonth,d));
+    const hol=isHoliday(key);
+    const cell=document.createElement('div');
+    cell.className='cell'+(key===todayKey?' today':'')+(hol?' holiday':'');
+    cell.onclick=()=>openSheet(key);
+    let html='<div class="dnum">'+d+'</div>';
+    if(hol)html+='<div class="hol">休</div>';
+    // 合并展示：已记录(实线标签) + 计划课(虚线标签)
+    const recs=records[key]||[];
+    let hasLeave=false;
+    const items=[];
+    recs.forEach(r=>{const c=getCourse(r.cid);if(r.status==='leave')hasLeave=true;items.push({color:c.color,name:c.name,plan:false});});
+    (planned[key]||[]).forEach(cid=>{const c=getCourse(cid);items.push({color:c.color,name:c.name,plan:true});});
+    items.slice(0,2).forEach(it=>{
+      html+='<div class="tag'+(it.plan?' plan':'')+'" style="'+(it.plan?'color:'+it.color+';border-color:'+it.color:'background:'+it.color)+'">'+it.name+'</div>';
+    });
+    if(items.length>2)html+='<div class="more">+'+(items.length-2)+'</div>';
+    if(hasLeave)html+='<div class="dot-leave"></div>';
+    cell.innerHTML=html;
+    grid.appendChild(cell);
+  }
+}
+
+/* ---------- 渲染周视图 ---------- */
+function renderWeek(){
+  const wv=document.getElementById('weekView');
+  wv.innerHTML='';
+  // 取今天所在周（周一起）
+  let base=new Date(TODAY);let wd=base.getDay();wd=wd===0?7:wd;
+  base.setDate(base.getDate()-(wd-1));
+  const names=['周一','周二','周三','周四','周五','周六','周日'];
+  for(let i=0;i<7;i++){
+    const day=new Date(base);day.setDate(base.getDate()+i);
+    const key=ymd(day);const recs=records[key]||[];
+    const box=document.createElement('div');box.className='wv-day';box.onclick=()=>openSheet(key);
+    let html='<div class="d">'+names[i]+' <small>'+(day.getMonth()+1)+'/'+day.getDate()+'</small></div>';
+    if(recs.length===0){html+='<div class="wv-empty">— 无记录 —</div>';}
+    else{recs.forEach(r=>{const c=getCourse(r.cid);
+      html+='<div class="wv-item"><div class="bar" style="background:'+c.color+'"></div><span class="ct">'+c.name+'</span><span class="tm">'+(r.start||'')+(r.end?'-'+r.end:'')+'</span></div>';});}
+    box.innerHTML=html;wv.appendChild(box);
+  }
+}
+
+/* ---------- 月/周视图切换 ---------- */
+function switchCalView(v){
+  calView=v;
+  document.getElementById('segMonth').classList.toggle('on',v==='month');
+  document.getElementById('segWeek').classList.toggle('on',v==='week');
+  document.getElementById('monthView').style.display=v==='month'?'block':'none';
+  document.getElementById('weekView').style.display=v==='week'?'block':'none';
+  if(v==='week')renderWeek();
+}
+function changeMonth(delta){
+  viewMonth+=delta;
+  if(viewMonth<0){viewMonth=11;viewYear--;}
+  if(viewMonth>11){viewMonth=0;viewYear++;}
+  renderCalendar();
+}
+function goToday(){viewYear=2026;viewMonth=5;renderCalendar();}
+
+/* ---------- 底部 Tab 切换 ---------- */
+function switchTab(tab,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.getElementById('page-'+tab).classList.add('on');
+  document.querySelectorAll('.tabbar button').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  // 顶部标题/按钮联动
+  const titles={cal:['课程日历','宝贝的成长记录'],stat:['统计分析','看看上课规律'],course:['课程库','管理常上的课程'],me:['我的','账号与设置']};
+  document.getElementById('topTitle').textContent=titles[tab][0];
+  document.getElementById('topSub').textContent=titles[tab][1];
+  document.getElementById('viewSeg').style.display=tab==='cal'?'flex':'none';
+  document.getElementById('fab').style.display=tab==='cal'?'flex':'none';
+}
+
+/* ---------- 统计柱状图 ---------- */
+function renderStats(){
+  const box=document.getElementById('statBars');
+  const max=Math.max(...Object.values(courseCount));
+  box.innerHTML=courses.map(c=>{
+    const n=courseCount[c.id]||0;const w=Math.round(n/max*100);
+    return '<div class="bar-row"><div class="name">'+c.name+'</div><div class="bar-track"><div class="bar-fill" style="width:'+w+'%;background:'+c.color+'">'+n+'次</div></div></div>';
+  }).join('');
+}
+
+/* ---------- 花费统计（按课时包金额汇总） ---------- */
+function renderSpend(){
+  let total=0,hours=0;
+  const rows=courses.filter(c=>c.trackHours).map(c=>{
+    const amt=(c.packages||[]).reduce((s,p)=>s+(p.amount||0),0);          // 学科总花费
+    const tot=(c.packages||[]).reduce((s,p)=>s+(p.amount!=null?p.total:0),0); // 有金额的总课时
+    total+=amt;hours+=tot;
+    return {c,amt};
+  }).filter(r=>r.amt>0);
+  const max=Math.max(...rows.map(r=>r.amt),1);
+  document.getElementById('spendSummary').innerHTML=
+    '<div class="stat-cards" style="margin:0 0 14px;">'
+    +'<div class="stat-card"><div class="n" style="font-size:18px;">'+total+'</div><div class="l">累计花费(元)</div></div>'
+    +'<div class="stat-card"><div class="n">'+(hours?(total/hours).toFixed(0):0)+'</div><div class="l">平均元/课时</div></div>'
+    +'<div class="stat-card"><div class="n">'+rows.length+'</div><div class="l">报班学科</div></div></div>';
+  document.getElementById('spendBars').innerHTML=rows.map(r=>{
+    const w=Math.round(r.amt/max*100);
+    return '<div class="bar-row"><div class="name">'+r.c.name+'</div><div class="bar-track"><div class="bar-fill" style="width:'+w+'%;background:'+r.c.color+'">'+r.amt+'元</div></div></div>';
+  }).join('');
+}
+
+/* ---------- 课程库列表 ---------- */
+function renderCourses(){
+  const box=document.getElementById('courseList');
+  box.innerHTML=courses.map(c=>{
+    const def=c.defaultStart
+      ? '🕐 默认 '+c.defaultStart+'-'+addMin(c.defaultStart,c.defaultDuration||60)
+      : '未设默认时间';
+    // 课时进度（仅统计课时的课程显示）
+    let hours='';
+    if(c.trackHours){
+      const p=activePkg(c);
+      if(p){
+        const rem=p.total-p.used,pct=Math.round(p.used/p.total*100),low=rem<=3;
+        hours='<div class="hours"><div class="hb-track"><div class="hb-fill'+(low?' low':'')+'" style="width:'+pct+'%"></div></div>'
+          +'<div class="hb-label'+(low?' low':'')+'">剩 '+rem+'/'+p.total+' 课时'+(low?' · 快用完了':'')+'</div></div>';
+      }else{
+        hours='<div class="hours"><div class="hb-label low">课时已用完 · 点击续费</div></div>';
+      }
+    }
+    return '<div class="course-item" onclick="openCourseEdit('+c.id+')"><div class="swatch" style="background:'+c.color+'"></div>'
+      +'<div style="flex:1;min-width:0;"><div class="nm">'+c.name+(c.trackHours?' <span class="badge-ko">课外班</span>':'')+'</div>'
+      +'<div style="font-size:12px;color:var(--text-sub);margin-top:3px;">'+def+'</div>'+hours+'</div>'
+      +'<div class="cnt">'+(courseCount[c.id]||0)+' 条 ›</div></div>';
+  }).join('');
+}
+
+/* ---------- 打开当日抽屉 ---------- */
+function openSheet(key){
+  const d=new Date(key);
+  const wn=['日','一','二','三','四','五','六'][d.getDay()];
+  document.getElementById('sheetDate').innerHTML=(d.getMonth()+1)+'月'+d.getDate()+'日 <small>星期'+wn+'</small>';
+  renderSheetList(key);
+  document.getElementById('mask').classList.add('on');
+  setTimeout(()=>document.getElementById('sheet').classList.add('on'),10);
+}
+function closeSheet(){
+  document.getElementById('sheet').classList.remove('on');
+  setTimeout(()=>document.getElementById('mask').classList.remove('on'),260);
+}
+
+// 渲染抽屉内的当日记录列表
+function renderSheetList(key){
+  const recs=records[key]||[];
+  let html='';
+  recs.forEach((r,i)=>{
+    const c=getCourse(r.cid);const m=durMin(r.start,r.end);
+    html+='<div class="rec"><div class="ops"><button onclick="showForm(\''+key+'\','+i+')">编辑</button><button onclick="toast(\'原型演示：删除记录\')">删除</button></div>'
+      +'<div class="top"><div class="bar" style="background:'+c.color+'"></div><span class="nm">'+c.name+'</span><span class="st st-'+r.status+'">'+statusText[r.status]+'</span></div>';
+    html+='<div class="meta">';
+    if(r.start)html+='<span>🕐 '+r.start+'-'+r.end+'</span>';
+    if(m>0)html+='<span>⏱ '+m+'分钟</span>';
+    html+='</div>';
+    if(r.note)html+='<div class="note">'+r.note+'</div>';
+    if(r.photos>0){html+='<div class="photos">';for(let p=0;p<r.photos;p++)html+='<div class="ph">🖼️</div>';html+='</div>';}
+    html+='</div>';
+  });
+  if(recs.length===0)html+='<div style="text-align:center;color:var(--text-sub);padding:24px 0;font-size:14px;">这一天还没有记录哦</div>';
+  html+='<button class="add-rec" onclick="showForm(\''+key+'\',-1)">＋ 添加一节课</button>';
+  document.getElementById('sheetBody').innerHTML=html;
+}
+
+/* ---------- 新增/编辑记录表单 ---------- */
+let formCourseId=null;
+function showForm(key,idx){
+  const editing=idx>=0;
+  const r=editing?records[key][idx]:{cid:null,start:'',end:'',status:'attended',note:'',photos:0};
+  formCourseId=r.cid;
+  const cName=r.cid?getCourse(r.cid).name:'';
+  const html=`
+  <div class="form">
+    <div class="field combo">
+      <label>课程</label>
+      <input type="text" id="f-course" placeholder="输入或选择课程，没有会自动创建" value="${cName}"
+        oninput="filterCombo()" onfocus="filterCombo()" autocomplete="off">
+      <div class="combo-list" id="comboList"></div>
+    </div>
+    <label style="margin-bottom:8px;">时间段 <span style="color:var(--text-sub);font-weight:400;">· 选课自动带出，可修改</span></label>
+    <div class="row">
+      <div class="field"><input type="time" id="f-start" value="${r.start}" onchange="calcDur()"></div>
+      <div class="field"><input type="time" id="f-end" value="${r.end}" onchange="calcDur()"></div>
+    </div>
+    <div id="durHint" class="dur-hint"></div>
+    <div id="deductBox"></div>
+    <div class="field">
+      <label>状态</label>
+      <div class="status-pick" id="statusPick">
+        <button data-s="attended" class="${r.status==='attended'?'on':''}" onclick="pickStatus(this)">到课</button>
+        <button data-s="leave" class="${r.status==='leave'?'on':''}" onclick="pickStatus(this)">请假</button>
+        <button data-s="reschedule" class="${r.status==='reschedule'?'on':''}" onclick="pickStatus(this)">调课</button>
+      </div>
+    </div>
+    <div class="field"><label>备注</label><textarea id="f-note" rows="3" placeholder="今天学了什么、表现如何…">${r.note||''}</textarea></div>
+    <div class="field">
+      <label>照片</label>
+      <div class="photo-pick">
+        ${'<div class="added">🖼️</div>'.repeat(r.photos)}
+        <div class="add" onclick="toast('原型演示：调用相机/相册')"><span class="p">＋</span>上传</div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-ghost" onclick="renderSheetList('${key}')">取消</button>
+      <button class="btn-primary" onclick="saveRec('${key}')">保存</button>
+    </div>
+  </div>`;
+  document.getElementById('sheetBody').innerHTML=html;
+  calcDur();
+  updateDeduct(formCourseId);   // 若该课统计课时，显示扣课时
+}
+
+// 下拉建值：根据输入过滤课程，无匹配则提供“创建”项
+function filterCombo(){
+  const inp=document.getElementById('f-course');
+  const kw=inp.value.trim();
+  const list=document.getElementById('comboList');
+  const matched=courses.filter(c=>c.name.includes(kw));
+  let html='';
+  matched.forEach(c=>{
+    html+='<div class="combo-opt" onclick="pickCourse('+c.id+",'"+c.name+"')\"><span class=\"sw\" style=\"background:"+c.color+'"></span>'+c.name+'</div>';
+  });
+  // 输入了内容且没有完全同名的课程 → 显示创建项（腾讯表格式建值）
+  const exact=courses.some(c=>c.name===kw);
+  if(kw&&!exact){
+    html+='<div class="combo-opt combo-create" onclick="createCourse(\''+kw+'\')"><span class="plus">＋</span>创建「'+kw+'」</div>';
+  }
+  list.innerHTML=html;
+  list.classList.toggle('on',html!=='');
+}
+// 选中已有课程：自动套用该课程的默认时间段（固定排课，免去重复填写）
+function pickCourse(id,name){
+  formCourseId=id;
+  document.getElementById('f-course').value=name;
+  document.getElementById('comboList').classList.remove('on');
+  const c=getCourse(id);
+  const s=document.getElementById('f-start'),e=document.getElementById('f-end');
+  if(c&&c.defaultStart&&s&&e){
+    s.value=c.defaultStart;
+    e.value=addMin(c.defaultStart,c.defaultDuration||60);
+    calcDur();
+    // 提示已套用默认时间，可手动改
+    const hint=document.getElementById('durHint');
+    if(hint)hint.innerHTML='⏱ 已套用「'+name+'」默认时间 '+s.value+'-'+e.value+'，可修改';
+  }
+  updateDeduct(id);
+}
+// 创建新课程（演示：随机配色加入课程库，新课程暂无默认时间，可后续在课程库设置）
+function createCourse(name){
+  const palette=['#3b6cff','#1aa463','#22b8cf','#d99214','#e8694a','#b06bff','#ec4899'];
+  const nid=Math.max(...courses.map(c=>c.id))+1;
+  const color=palette[nid%palette.length];
+  courses.push({id:nid,name:name,color:color,defaultStart:'',defaultDuration:60});
+  courseCount[nid]=0;
+  pickCourse(nid,name);
+  toast('已创建「'+name+'」，可在课程库设默认时间');
+  renderCourses();
+}
+// 选择状态
+function pickStatus(btn){
+  document.querySelectorAll('#statusPick button').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+// 自动计算时长
+function calcDur(){
+  const s=document.getElementById('f-start').value,e=document.getElementById('f-end').value;
+  const m=durMin(s,e);
+  document.getElementById('durHint').textContent=m>0?('⏱ 本节课时长：'+m+' 分钟'):'';
+}
+// 保存记录（演示：写入内存并刷新）
+function saveRec(key){
+  if(!formCourseId){toast('请先选择或创建课程');return;}
+  const rec={
+    cid:formCourseId,
+    start:document.getElementById('f-start').value,
+    end:document.getElementById('f-end').value,
+    status:document.querySelector('#statusPick button.on').dataset.s,
+    note:document.getElementById('f-note').value,
+    photos:document.querySelectorAll('.photo-pick .added').length
+  };
+  if(!records[key])records[key]=[];
+  records[key].push(rec);
+  renderSheetList(key);
+  renderCalendar();
+  toast('已保存');
+}
+
+/* ---------- 统计页范围切换 ---------- */
+function setRange(btn,r){
+  document.querySelectorAll('.range button').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  if(r==='custom')toast('原型演示：弹出日期区间选择');
+}
+
+/* ============================================================
+   课程编辑（含默认时间、是否统计课时、课时包循环统计）
+   ============================================================ */
+const COLORS=['#3b6cff','#1aa463','#22b8cf','#d99214','#e8694a','#b06bff','#ec4899','#0ea5e9'];
+let editCourse=null;   // 正在编辑的课程对象
+let editIsNew=false;
+
+// 打开课程编辑（id=0 表示新建）
+function openCourseEdit(id){
+  editIsNew=(id===0);
+  if(editIsNew){
+    editCourse={id:0,name:'',color:COLORS[0],defaultStart:'',defaultDuration:60,weekdays:[],skipHoliday:true,trackHours:false,packages:[]};
+    document.getElementById('courseSheetTitle').textContent='新建课程';
+  }else{
+    editCourse=getCourse(id);
+    document.getElementById('courseSheetTitle').textContent='编辑课程';
+  }
+  renderCourseEdit();
+  document.getElementById('courseMask').classList.add('on');
+  setTimeout(()=>document.getElementById('courseSheet').classList.add('on'),10);
+}
+function closeCourseEdit(){
+  document.getElementById('courseSheet').classList.remove('on');
+  setTimeout(()=>document.getElementById('courseMask').classList.remove('on'),260);
+}
+// 渲染课程编辑表单
+function renderCourseEdit(){
+  const c=editCourse;
+  const colors=COLORS.map(col=>'<div class="co'+(col===c.color?' on':'')+'" style="background:'+col+'" onclick="pickColor(\''+col+'\')"></div>').join('');
+  const WD=['一','二','三','四','五','六','日'];
+  const wdPills=WD.map((n,i)=>{const wd=i+1;const on=(c.weekdays||[]).includes(wd);return '<div class="wd'+(on?' on':'')+'" onclick="toggleWeekday('+wd+')">'+n+'</div>';}).join('');
+  let pkgHtml='';
+  if(c.trackHours){
+    // 课时包时间线：最新在上，生效包高亮
+    const list=(c.packages||[]).slice().reverse().map(p=>{
+      if(p.id===editingPkgId)return pkgEditForm(p);   // 该包处于内联编辑态
+      const rem=p.total-p.used;
+      return '<div class="pkg'+(p.status==='active'?' active':'')+'">'
+        +'<div class="pt"><b>'+p.total+' 课时包</b><span>'
+        +(p.status==='active'?'<button class="pkg-adj" onclick="startEditPkg('+p.id+')">调整</button>':'')
+        +'<span class="ptag '+(p.status==='active'?'ptag-active':'ptag-done')+'">'+(p.status==='active'?'生效中':'已用完')+'</span></span></div>'
+        +'<div class="pinfo">购买于 '+p.date+' · 已上 '+p.used+'/'+p.total
+        +(p.status==='active'?' · <b style="color:var(--primary)">剩 '+rem+' 课时</b>':'')+'</div>'
+        +(p.amount!=null?'<div class="pinfo">💰 '+p.amount+' 元 · 平均 '+(p.amount/p.total).toFixed(0)+' 元/课时</div>':'')
+        +'</div>';
+    }).join('');
+    pkgHtml='<div class="field"><label>课时包 <span style="color:var(--text-sub);font-weight:400;">· 循环统计，旧包自动归档</span></label>'
+      +(list||'<div style="font-size:13px;color:var(--text-sub);margin-bottom:8px;">还没有课时包</div>')
+      +'<button class="add-rec" onclick="addPackage()">＋ 续费 / 新增课时包</button></div>';
+  }
+  document.getElementById('courseSheetBody').innerHTML=`
+  <div class="form">
+    <div class="field"><label>课程名称</label><input type="text" id="ce-name" value="${c.name}" placeholder="如：英语、钢琴"></div>
+    <div class="field"><label>颜色</label><div class="color-pick">${colors}</div></div>
+    <label style="margin-bottom:8px;">默认时间段 <span style="color:var(--text-sub);font-weight:400;">· 选课自动带出</span></label>
+    <div class="row">
+      <div class="field"><input type="time" id="ce-start" value="${c.defaultStart||''}"></div>
+      <div class="field"><input type="time" id="ce-end" value="${c.defaultStart?addMin(c.defaultStart,c.defaultDuration||60):''}"></div>
+    </div>
+    <div class="field"><label>上课星期 <span style="color:var(--text-sub);font-weight:400;">· 可多选，用于自动预排日历</span></label><div class="wd-pick">${wdPills}</div></div>
+    <div class="field" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div><label style="margin:0;">遇法定假日</label><div style="font-size:12px;color:var(--text-sub);margin-top:4px;">开：跳过假日不排课；关：假日照常排课</div></div>
+      <div class="switch ${c.skipHoliday?'on':''}" onclick="toggleSkipHoliday()"></div>
+    </div>
+    <div class="field" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div><label style="margin:0;">统计课时</label><div style="font-size:12px;color:var(--text-sub);margin-top:4px;">课外补习班开启；学校课 / 兴趣课关闭</div></div>
+      <div class="switch ${c.trackHours?'on':''}" onclick="toggleTrack()"></div>
+    </div>
+    ${pkgHtml}
+    <div class="form-actions">
+      <button class="btn-ghost" onclick="closeCourseEdit()">取消</button>
+      <button class="btn-primary" onclick="saveCourse()">保存</button>
+    </div>
+  </div>`;
+}
+// 重渲染前先把课程表单已填内容存回对象，避免丢失
+function syncCourseForm(){
+  const n=document.getElementById('ce-name');if(n)editCourse.name=n.value;
+  const s=document.getElementById('ce-start'),e=document.getElementById('ce-end');
+  if(s)editCourse.defaultStart=s.value;
+  if(s&&e&&s.value&&e.value)editCourse.defaultDuration=durMin(s.value,e.value);
+}
+function pickColor(col){syncCourseForm();editCourse.color=col;renderCourseEdit();}
+function toggleTrack(){syncCourseForm();editCourse.trackHours=!editCourse.trackHours;renderCourseEdit();}
+// 切换上课星期（多选）
+function toggleWeekday(wd){syncCourseForm();const a=editCourse.weekdays||(editCourse.weekdays=[]);const i=a.indexOf(wd);if(i>=0)a.splice(i,1);else a.push(wd);renderCourseEdit();}
+// 切换是否休法定假日
+function toggleSkipHoliday(){syncCourseForm();editCourse.skipHoliday=!editCourse.skipHoliday;renderCourseEdit();}
+
+// 课时包内联编辑：可改“总课时”和“已上课时”（中途接入系统 / 补漏记 都靠它校正）
+function pkgEditForm(p){
+  return '<div class="pkg active">'
+    +'<div class="row"><div class="field" style="margin-bottom:10px;"><label>购买总课时</label><input type="number" id="pe-total" value="'+p.total+'" min="1" step="0.5"></div>'
+    +'<div class="field" style="margin-bottom:10px;"><label>已上课时</label><input type="number" id="pe-used" value="'+p.used+'" min="0" step="0.5"></div></div>'
+    +'<div class="row"><div class="field" style="margin-bottom:10px;"><label>购买日期</label><input type="date" id="pe-date" value="'+(p.date||'')+'"></div>'
+    +'<div class="field" style="margin-bottom:10px;"><label>金额（元）</label><input type="number" id="pe-amount" value="'+(p.amount!=null?p.amount:'')+'" min="0" placeholder="如 3200"></div></div>'
+    +'<div style="font-size:12px;color:var(--text-sub);margin-bottom:10px;">已上/补漏可直接改；金额用于统计花费与平均课时费</div>'
+    +'<div class="form-actions"><button class="btn-ghost" onclick="cancelEditPkg()">取消</button><button class="btn-primary" onclick="saveEditPkg('+p.id+')">确定</button></div></div>';
+}
+let editingPkgId=null;   // 正在内联编辑的课时包 id（null 表示无）
+function startEditPkg(id){syncCourseForm();editingPkgId=id;renderCourseEdit();}
+function cancelEditPkg(){editingPkgId=null;renderCourseEdit();}
+function saveEditPkg(id){
+  const p=editCourse.packages.find(x=>x.id===id);
+  const total=parseFloat(document.getElementById('pe-total').value);
+  const used=parseFloat(document.getElementById('pe-used').value);
+  const amount=parseFloat(document.getElementById('pe-amount').value);
+  const date=document.getElementById('pe-date').value;
+  if(!isNaN(total)&&total>0)p.total=total;
+  if(!isNaN(used)&&used>=0)p.used=used;
+  if(p.used>p.total)p.used=p.total;   // 已上不超过总课时
+  p.amount=isNaN(amount)?null:amount;
+  if(date)p.date=date;
+  editingPkgId=null;
+  renderCourseEdit();
+  renderSpend();        // 同步刷新花费统计
+  renderCalendar();     // 剩余课时变化 → 重排计划课
+  toast('已更新课时包');
+}
+// 续费 / 新增课时包：旧的生效包归档，新增一个生效包并直接进入编辑（可填总课时/已上）
+function addPackage(){
+  syncCourseForm();
+  (editCourse.packages||[]).forEach(p=>{if(p.status==='active')p.status='done';});
+  const nid=(editCourse.packages.length?Math.max(...editCourse.packages.map(p=>p.id)):0)+1;
+  editCourse.packages.push({id:nid,total:20,date:'2026-06-17',amount:null,used:0,status:'active'});
+  editingPkgId=nid;   // 新增后直接展开编辑，方便设置总课时与已上
+  renderCourseEdit();
+}
+// 保存课程（新建或编辑）
+function saveCourse(){
+  const name=document.getElementById('ce-name').value.trim();
+  if(!name){toast('请填写课程名称');return;}
+  const s=document.getElementById('ce-start').value,e=document.getElementById('ce-end').value;
+  editCourse.name=name;
+  editCourse.defaultStart=s;
+  editCourse.defaultDuration=(s&&e)?durMin(s,e):60;
+  if(editIsNew){
+    editCourse.id=Math.max(...courses.map(c=>c.id))+1;
+    courses.push(editCourse);
+    courseCount[editCourse.id]=0;
+  }
+  closeCourseEdit();
+  renderCourses();
+  renderCalendar();   // 排课规则变化 → 重排计划课
+  renderSpend();
+  toast('已保存课程');
+}
+
+// 记录表单里：根据所选课程是否统计课时，显示“扣课时”步进器
+function updateDeduct(id){
+  const box=document.getElementById('deductBox');if(!box)return;
+  const c=getCourse(id);
+  if(c&&c.trackHours){
+    const rem=remainHours(c);
+    box.innerHTML='<div class="field"><label>扣课时 <span style="color:var(--text-sub);font-weight:400;">· 本课程剩 '+(rem==null?'—':rem)+' 课时</span></label>'
+      +'<div class="step"><button type="button" onclick="stepDeduct(-0.5)">−</button><span id="deductVal">1</span><button type="button" onclick="stepDeduct(0.5)">＋</button><span style="color:var(--text-sub);font-size:13px;">课时（请假/调课不扣）</span></div></div>';
+  }else{box.innerHTML='';}
+}
+function stepDeduct(d){
+  const el=document.getElementById('deductVal');if(!el)return;
+  let v=parseFloat(el.textContent)+d;if(v<0.5)v=0.5;
+  el.textContent=Number.isInteger(v)?v:v.toFixed(1);
+}
+
+/* ---------- 轻提示 ---------- */
+let toastTimer;
+function toast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('on'),1800);
+}
+
+// 点击空白处关闭下拉
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.combo')){const l=document.getElementById('comboList');if(l)l.classList.remove('on');}
+});
+
+/* ---------- 初始化 ---------- */
+renderCalendar();
+renderStats();
+renderCourses();
+renderSpend();
+</script>
+</body>
+</html>
