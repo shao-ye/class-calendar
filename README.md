@@ -9,7 +9,8 @@
 
 技术栈：Vue 3 + Vite、Cloudflare Pages Functions、Cloudflare D1、Cloudflare R2，以及一个可选的 Cloudflare Worker 用于节假日同步。
 
-> 在线体验：<https://class.shaoruiyi.com>（演示实例为单用户，请勿提交真实隐私数据）
+> 在线体验：<https://class.shaoruiyi.com>
+> 公开体验账号：用户名 `parent` / 密码 `123456`（仅供试用，数据可能被随时清理，请勿录入真实隐私信息）
 
 ## 功能概览
 
@@ -22,15 +23,13 @@
 
 ## 界面预览
 
-> 截图占位：把真实界面截图放入 `doc/screenshots/` 目录，按下表文件名命名即可自动显示（详见 [doc/screenshots/README.md](doc/screenshots/README.md)）。
-
 | 日历视图 | 统计分析 |
 | --- | --- |
-| ![日历视图](doc/screenshots/calendar.png) | ![统计分析](doc/screenshots/stats.png) |
+| ![日历视图](https://image.5202021.xyz/api/rfile/calendar.png) | ![统计分析](https://image.5202021.xyz/api/rfile/stats.png) |
 
 | 课程库 | 当日记录 |
 | --- | --- |
-| ![课程库](doc/screenshots/courses.png) | ![当日记录](doc/screenshots/record.png) |
+| ![课程库](https://image.5202021.xyz/api/rfile/courses.png) | ![当日记录](https://image.5202021.xyz/api/rfile/record.png) |
 
 ## 开源与安全声明
 
