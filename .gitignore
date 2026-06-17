@@ -5,3 +5,8 @@ dist
 *.log
 
 cookies.txt
+
+# 含账号特定 ID / 口令哈希的本地真实配置（用对应 .example 作模板）
+wrangler.toml
+worker-holidays/wrangler.toml
+seed.sql

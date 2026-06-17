@@ -1,0 +1,13 @@
+name = "class-holidays-sync"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# 复制本文件为 wrangler.toml，database_id 填与 Pages 相同的那个 D1 库 ID
+[[d1_databases]]
+binding = "DB"
+database_name = "class_calendar"
+database_id = "YOUR_D1_DATABASE_ID"
+
+# 定时触发：每月 28 号 UTC 18:00（北京时间次日 02:00）同步当年与次年假日
+[triggers]
+crons = ["0 18 28 * *"]
