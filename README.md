@@ -120,6 +120,21 @@ npm run ui
 
 欢迎通过 Issue 和 Pull Request 参与改进。提交前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)，并确保没有提交本地密钥、真实配置、真实账号数据或个人隐私数据。
 
+## ❤️ 赞助支持
+
+开源不易，如果这个项目帮到了你，可以请作者喝杯咖啡 ☕
+
+![请我喝杯咖啡](https://img.shields.io/badge/%E2%98%95_%E8%AF%B7%E6%88%91%E5%96%9D%E6%9D%AF%E5%92%96%E5%95%A1-%E5%BE%AE%E4%BF%A1%20%2F%20%E6%94%AF%E4%BB%98%E5%AE%9D-07C160?style=for-the-badge&logo=wechat&logoColor=white)
+
+<details>
+<summary>📱 点击展开微信赞赏码 / 支付宝收款码</summary>
+<br>
+<p>
+  <img src="https://image.5202021.xyz/api/rfile/weChatQR.jpg" alt="微信赞赏码" height="260">
+  <img src="https://image.5202021.xyz/api/rfile/AlipayQR.png" alt="支付宝收款码" height="260">
+</p>
+</details>
+
 ## 许可证
 
 本项目基于 [MIT License](LICENSE) 开源。
