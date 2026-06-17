@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS courses (
   weekdays         TEXT,                        -- 上课星期 "2,4"（1=周一…7=周日）
   skip_holiday     INTEGER NOT NULL DEFAULT 1,  -- 遇法定假日是否跳过排课
   track_hours      INTEGER NOT NULL DEFAULT 0,  -- 是否统计课时（课外班=1）
+  note             TEXT,                        -- 课程备注（如上课地点、老师、注意事项等）
   is_active        INTEGER NOT NULL DEFAULT 1,
   created_at       TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (user_id) REFERENCES users(id),

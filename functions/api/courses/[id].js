@@ -13,11 +13,12 @@ export async function onRequestPut({ env, data, request, params }) {
 
   try {
     await env.DB.prepare(
-      `UPDATE courses SET name=?, color=?, default_start=?, default_duration=?, weekdays=?, skip_holiday=?, track_hours=?
+      `UPDATE courses SET name=?, color=?, default_start=?, default_duration=?, weekdays=?, skip_holiday=?, track_hours=?, note=?
        WHERE id=? AND user_id=?`
     ).bind(
       b.name.trim(), b.color || '#3b6cff', b.defaultStart || null, b.defaultDuration || 60,
-      weekdaysToStr(b.weekdays), b.skipHoliday ? 1 : 0, b.trackHours ? 1 : 0, id, data.uid
+      weekdaysToStr(b.weekdays), b.skipHoliday ? 1 : 0, b.trackHours ? 1 : 0,
+      b.note && b.note.trim() ? b.note.trim() : null, id, data.uid
     ).run()
     return json({ ok: true })
   } catch (e) {

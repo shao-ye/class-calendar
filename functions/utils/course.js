@@ -10,7 +10,8 @@ export function toCourse(row) {
     defaultDuration: row.default_duration,
     weekdays: row.weekdays ? row.weekdays.split(',').map(Number) : [],
     skipHoliday: !!row.skip_holiday,
-    trackHours: !!row.track_hours
+    trackHours: !!row.track_hours,
+    note: row.note || ''
   }
 }
 

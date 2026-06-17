@@ -46,8 +46,8 @@ function wdText(c) {
 async function openEdit(c) {
   isNew.value = !c
   form.value = c
-    ? { ...c, weekdays: [...c.weekdays], end: endOf(c) }
-    : { name: '', color: COLORS[0], defaultStart: '', defaultDuration: 60, weekdays: [], skipHoliday: true, trackHours: false, end: '' }
+    ? { ...c, weekdays: [...c.weekdays], end: endOf(c), note: c.note || '' }
+    : { name: '', color: COLORS[0], defaultStart: '', defaultDuration: 60, weekdays: [], skipHoliday: true, trackHours: false, end: '', note: '' }
   packages.value = []
   editingPkgId.value = null
   editing.value = true
@@ -120,7 +120,8 @@ async function save() {
   }
   const payload = {
     name: f.name.trim(), color: f.color, defaultStart: f.defaultStart || null,
-    defaultDuration: duration, weekdays: f.weekdays, skipHoliday: f.skipHoliday, trackHours: f.trackHours
+    defaultDuration: duration, weekdays: f.weekdays, skipHoliday: f.skipHoliday, trackHours: f.trackHours,
+    note: f.note ? f.note.trim() : ''
   }
   saving.value = true
   try {
@@ -170,6 +171,7 @@ function toast(msg) {
         <div class="nm">{{ c.name }}<span v-if="c.trackHours" class="badge">课外班</span></div>
         <div class="meta">{{ c.defaultStart ? '🕐 ' + c.defaultStart + '-' + endOf(c) : '未设默认时间' }}</div>
         <div class="meta">{{ wdText(c) }}</div>
+        <div v-if="c.note" class="meta note">📝 {{ c.note }}</div>
         <div v-if="c.trackHours" class="hours">
           <template v-if="c.activePackage">
             <div class="hb-track">
@@ -216,6 +218,9 @@ function toast(msg) {
             <div v-for="(n, i) in WD" :key="i" class="wd" :class="{ on: form.weekdays.includes(i + 1) }"
               @click="toggleWeekday(i + 1)">{{ n }}</div>
           </div>
+
+          <label>备注 <span class="hint">· 选填，如上课地点、老师、注意事项</span></label>
+          <textarea v-model="form.note" rows="3" maxlength="200" placeholder="如：xx 教育 3 楼 302，王老师"></textarea>
 
           <div class="switch-row">
             <div><b>遇法定假日</b><div class="hint2">开：跳过假日不排课</div></div>
@@ -287,6 +292,7 @@ function toast(msg) {
 .nm { font-weight: 600; font-size: 15px; }
 .badge { font-size: 10px; color: #d99214; background: #fff4e0; padding: 1px 6px; border-radius: 6px; margin-left: 6px; }
 .meta { font-size: 12px; color: var(--text-sub); margin-top: 3px; }
+.meta.note { white-space: pre-wrap; word-break: break-word; }
 .arrow { color: var(--text-sub); }
 .add { width: calc(100% - 24px); margin: 8px 12px; padding: 14px; border-radius: 14px; background: var(--primary-soft); color: var(--primary); font-weight: 700; font-size: 15px; }
 
@@ -300,8 +306,9 @@ function toast(msg) {
 .sheet-body label:first-child { margin-top: 0; }
 .hint { color: var(--text-sub); font-weight: 400; }
 .hint2 { font-size: 12px; color: var(--text-sub); margin-top: 4px; }
-input[type=text], input[type=time] { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 14px; background: var(--card); outline: none; }
-input:focus { border-color: var(--primary); }
+input[type=text], input[type=time], textarea { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 14px; background: var(--card); outline: none; }
+textarea { resize: vertical; font-family: inherit; line-height: 1.5; }
+input:focus, textarea:focus { border-color: var(--primary); }
 .row { display: flex; gap: 10px; }
 .colors { display: flex; gap: 10px; flex-wrap: wrap; }
 .co { width: 30px; height: 30px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; }
