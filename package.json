@@ -1,6 +1,24 @@
 {
   "name": "class-calendar",
-  "private": true,
+  "version": "0.1.0",
+  "description": "孩子每日课程、课包消耗和上课记录的小型日历工具。",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shao-ye/class-calendar.git"
+  },
+  "bugs": {
+    "url": "https://github.com/shao-ye/class-calendar/issues"
+  },
+  "homepage": "https://github.com/shao-ye/class-calendar#readme",
+  "keywords": [
+    "calendar",
+    "course",
+    "vue",
+    "cloudflare-pages",
+    "d1",
+    "r2"
+  ],
   "type": "module",
   "scripts": {
     "ui": "vite",
