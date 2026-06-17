@@ -2,7 +2,14 @@
 
 孩子每日课程、课包消耗、上课记录和照片归档的小型日历工具。
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Vue 3](https://img.shields.io/badge/Vue-3-42b883?logo=vuedotjs&logoColor=white)](https://vuejs.org/)
+[![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-Pages%20%7C%20D1%20%7C%20R2-F38020?logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/)
+
 技术栈：Vue 3 + Vite、Cloudflare Pages Functions、Cloudflare D1、Cloudflare R2，以及一个可选的 Cloudflare Worker 用于节假日同步。
+
+> 在线体验：<https://class.shaoruiyi.com>（演示实例为单用户，请勿提交真实隐私数据）
 
 ## 功能概览
 
@@ -12,6 +19,18 @@
 - 照片归档：通过 R2 保存课程相关照片
 - 账号登录：基于用户名密码和签名 Cookie 的轻量认证
 - 节假日同步：可选 Worker 定时同步法定节假日
+
+## 界面预览
+
+> 截图占位：把真实界面截图放入 `doc/screenshots/` 目录，按下表文件名命名即可自动显示（详见 [doc/screenshots/README.md](doc/screenshots/README.md)）。
+
+| 日历视图 | 统计分析 |
+| --- | --- |
+| ![日历视图](doc/screenshots/calendar.png) | ![统计分析](doc/screenshots/stats.png) |
+
+| 课程库 | 当日记录 |
+| --- | --- |
+| ![课程库](doc/screenshots/courses.png) | ![当日记录](doc/screenshots/record.png) |
 
 ## 开源与安全声明
 
