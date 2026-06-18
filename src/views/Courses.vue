@@ -123,10 +123,11 @@ function cancelBackfill() { backfillPkgId.value = null; backfillDate.value = '' 
 async function doBackfill(p) {
   if (!backfillDate.value) { toast('请选择起始日期'); return }
   try {
-    const r = await api('/api/packages/' + p.id + '/backfill', { method: 'POST', body: { startDate: backfillDate.value } })
+    // maxDate 传本地"今天"，确保只回填到今天为止，不生成未来记录
+    const r = await api('/api/packages/' + p.id + '/backfill', { method: 'POST', body: { startDate: backfillDate.value, maxDate: ymdLocal(new Date()) } })
     cancelBackfill()
     await loadPackages(form.value.id)
-    toast('已回填 ' + r.created + ' 条历史记录')
+    toast(r.remaining > 0 ? `已回填 ${r.created} 条；剩 ${r.remaining} 节无历史空位，仍记在期初已用` : `已回填 ${r.created} 条历史记录`)
   } catch (e) { toast(e.message) }
 }
 
@@ -313,7 +314,7 @@ function toast(msg) {
                   <template v-if="p.openingUsed > 0">
                     <button v-if="backfillPkgId !== p.id" class="pbackfill" @click="startBackfill(p)">📅 回填历史 {{ Math.floor(p.openingUsed) }} 节到日历</button>
                     <div v-else class="bf-panel">
-                      <div class="bf-tip">按「上课星期」从起始日依次补 {{ Math.floor(p.openingUsed) }} 条到课记录，跳过法定假日；补完期初已上归零，每条记录可在日历里逐条编辑。</div>
+                      <div class="bf-tip">按「上课星期」从起始日依次补到课记录（最多 {{ Math.floor(p.openingUsed) }} 条），只补到今天为止、跳过法定假日与已有记录日；排不下的余量仍留在期初已用。每条记录可在日历里逐条编辑。</div>
                       <label class="pl">起始日期</label>
                       <input type="date" v-model="backfillDate" />
                       <div class="pacts">

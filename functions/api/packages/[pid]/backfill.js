@@ -25,6 +25,8 @@ export async function onRequestPost({ env, data, request, params }) {
 
   const b = await readJson(request)
   if (!b.startDate || !/^\d{4}-\d{2}-\d{2}$/.test(b.startDate)) return json({ error: '请选择起始日期' }, 400)
+  // 回填上限：默认到客户端本地"今天"，缺省回落服务器 UTC 今天。历史回填不生成未来日期。
+  const maxDate = (b.maxDate && /^\d{4}-\d{2}-\d{2}$/.test(b.maxDate)) ? b.maxDate : fmtYmd(new Date())
 
   // 法定假日集合（仅放假日，调休补班日不算）
   const holSet = new Set()
@@ -44,18 +46,19 @@ export async function onRequestPost({ env, data, request, params }) {
   const duration = course.default_duration || 60
   const endTime = startTime ? addMinutes(startTime, duration) : null
 
-  // 从起始日向后逐天扫描，选出 count 个符合上课星期的日期
+  // 从起始日向后逐天扫描，选出 count 个符合上课星期的日期（只排到今天为止，不生成未来记录）
   const dates = []
   let d = parseYmd(b.startDate)
   let guard = 0
   while (dates.length < count && guard < 3000) {
     guard++
-    const wd = isoWeekday(d)               // 1=周一…7=周日
     const key = fmtYmd(d)
+    if (key > maxDate) break                // 到达今天之后即停止，未来不属于历史回填
+    const wd = isoWeekday(d)                // 1=周一…7=周日
     if (weekdays.includes(wd) && !holSet.has(key) && !existing.has(key)) dates.push(key)
     d = addDays(d, 1)
   }
-  if (!dates.length) return json({ error: '按规则未找到可回填的日期' }, 400)
+  if (!dates.length) return json({ error: '从该起始日到今天之间，按规则没有可回填的历史日期' }, 400)
 
   // 批量插入到课记录（绑定本包，扣 1 课时，备注标记为历史回填）
   const stmt = env.DB.prepare(
@@ -67,11 +70,11 @@ export async function onRequestPost({ env, data, request, params }) {
   )
   await env.DB.batch(batch)
 
-  // 期初已用扣掉已展开的节数（保持「总已用」不变，剩余小数留在期初）
+  // 期初已用扣掉已展开的节数（保持「总已用」不变；排不下的余量留在期初已用）
   const remainOpening = Math.max(0, opening - dates.length)
   await env.DB.prepare('UPDATE course_packages SET opening_used = ? WHERE id = ?').bind(remainOpening, pid).run()
 
-  return json({ ok: true, created: dates.length })
+  return json({ ok: true, created: dates.length, remaining: Math.floor(remainOpening) })
 }
 
 // ---- 日期工具（统一用 UTC，避免运行环境时区导致偏移）----
