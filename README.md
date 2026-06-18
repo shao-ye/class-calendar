@@ -6,6 +6,7 @@
 [![Vue 3](https://img.shields.io/badge/Vue-3-42b883?logo=vuedotjs&logoColor=white)](https://vuejs.org/)
 [![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Cloudflare](https://img.shields.io/badge/Cloudflare-Pages%20%7C%20D1%20%7C%20R2-F38020?logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/)
+[![Telegram](https://img.shields.io/badge/Telegram-交流群-26A5E4?logo=telegram&logoColor=white)](https://t.me/class_calendar)
 
 技术栈：Vue 3 + Vite、Cloudflare Pages Functions、Cloudflare D1、Cloudflare R2，以及一个可选的 Cloudflare Worker 用于节假日同步。
 
@@ -120,9 +121,19 @@ npm run ui
 
 欢迎通过 Issue 和 Pull Request 参与改进。提交前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)，并确保没有提交本地密钥、真实配置、真实账号数据或个人隐私数据。
 
+## 交流与反馈
+
+欢迎加入 [Telegram 交流群](https://t.me/class_calendar)，讨论使用问题、功能建议和项目更新。
+
 ## ❤️ 赞助支持
 
 开源不易，如果这个项目帮到了你，可以请作者喝杯咖啡 ☕
+
+国际用户可以通过 GitHub Sponsors 支持项目：
+
+[![GitHub Sponsors](https://img.shields.io/badge/GitHub_Sponsors-赞助项目-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/shao-ye)
+
+中国大陆用户可以使用微信或支付宝：
 
 ![请我喝杯咖啡](https://img.shields.io/badge/%E2%98%95_%E8%AF%B7%E6%88%91%E5%96%9D%E6%9D%AF%E5%92%96%E5%95%A1-%E5%BE%AE%E4%BF%A1%20%2F%20%E6%94%AF%E4%BB%98%E5%AE%9D-07C160?style=for-the-badge&logo=wechat&logoColor=white)
 
