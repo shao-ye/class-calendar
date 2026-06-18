@@ -1,5 +1,5 @@
 import { json, readJson } from '../../utils/http.js'
-import { calcDuration, activePackageId } from '../../utils/record.js'
+import { calcDuration, activePackageId, resolveFee } from '../../utils/record.js'
 
 // PUT /api/records/:id —— 更新记录（重新计算课时绑定）
 export async function onRequestPut({ env, data, request, params }) {
@@ -9,7 +9,7 @@ export async function onRequestPut({ env, data, request, params }) {
 
   const b = await readJson(request)
   const courseId = b.courseId || rec.course_id
-  const course = await env.DB.prepare('SELECT id, track_hours FROM courses WHERE id = ? AND user_id = ?')
+  const course = await env.DB.prepare('SELECT id, track_hours, bill_mode, default_fee FROM courses WHERE id = ? AND user_id = ?')
     .bind(courseId, data.uid).first()
   if (!course) return json({ error: '课程不存在' }, 404)
 
@@ -26,11 +26,14 @@ export async function onRequestPut({ env, data, request, params }) {
     packageId = rec.package_id || await activePackageId(env, course.id)
     consumed = b.consumedHours != null ? Number(b.consumedHours) : (rec.consumed_hours != null ? rec.consumed_hours : 1)
   }
+  // 单节花费：客户端传了 fee 用之，否则沿用原值（仍按计费方式/状态约束）
+  const feeInput = b.fee !== undefined ? b.fee : rec.fee
+  const fee = resolveFee(course, status, feeInput)
 
   await env.DB.prepare(
-    `UPDATE records SET date=?, course_id=?, start_time=?, end_time=?, duration=?, status=?, package_id=?, consumed_hours=?, note=?, updated_at=datetime('now')
+    `UPDATE records SET date=?, course_id=?, start_time=?, end_time=?, duration=?, status=?, package_id=?, consumed_hours=?, fee=?, note=?, updated_at=datetime('now')
      WHERE id=? AND user_id=?`
-  ).bind(b.date || rec.date, courseId, startTime || null, endTime || null, duration, status, packageId, consumed, note, id, data.uid).run()
+  ).bind(b.date || rec.date, courseId, startTime || null, endTime || null, duration, status, packageId, consumed, fee, note, id, data.uid).run()
   return json({ ok: true })
 }
 

@@ -46,13 +46,13 @@ function wdText(c) {
 async function openEdit(c) {
   isNew.value = !c
   form.value = c
-    ? { ...c, weekdays: [...c.weekdays], end: endOf(c), note: c.note || '' }
-    : { name: '', color: COLORS[0], defaultStart: '', defaultDuration: 60, weekdays: [], skipHoliday: true, trackHours: false, end: '', note: '' }
+    ? { ...c, weekdays: [...c.weekdays], end: endOf(c), note: c.note || '', billMode: c.billMode || 'none', defaultFee: c.defaultFee != null ? c.defaultFee : '' }
+    : { name: '', color: COLORS[0], defaultStart: '', defaultDuration: 60, weekdays: [], skipHoliday: true, billMode: 'none', defaultFee: '', end: '', note: '' }
   packages.value = []
   editingPkgId.value = null
   editing.value = true
-  // 已有的统计课时课程，加载其课时包
-  if (c && c.trackHours) await loadPackages(c.id)
+  // 已有的课时包课程，加载其课时包
+  if (c && c.billMode === 'package') await loadPackages(c.id)
 }
 function closeEdit() { editing.value = false; form.value = null; packages.value = [] }
 
@@ -61,6 +61,10 @@ async function loadPackages(courseId) {
   try { packages.value = await api('/api/courses/' + courseId + '/packages') }
   catch (e) { toast(e.message) }
 }
+// 计费方式标签（用于课程卡片角标）
+const BILL_LABEL = { package: '课时包', per_session: '单节付费', none: '' }
+function billLabel(c) { return BILL_LABEL[c.billMode] || '' }
+
 // 续费/新增：先确保课程已保存（有 id），再插入新包并进入编辑
 async function addPackage() {
   if (isNew.value || !form.value.id) { toast('请先保存课程，再添加课时包'); return }
@@ -100,6 +104,32 @@ async function delPkg(id) {
 // 平均课时费
 function avgPrice(p) { return p.amount != null && p.total ? Math.round(p.amount / p.total) : null }
 
+// ---------- 历史回填 ----------
+const backfillPkgId = ref(null)   // 正在回填的课时包 id
+const backfillDate = ref('')      // 回填起始日期
+
+// 本地日期 → YYYY-MM-DD
+function ymdLocal(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') }
+
+// 打开回填面板：默认起始日按"今天往前约 N 周"预填，可改
+function startBackfill(p) {
+  if (!form.value.weekdays || !form.value.weekdays.length) { toast('请先设置上课星期并保存课程'); return }
+  const n = Math.floor(p.openingUsed || 0)
+  const d = new Date(); d.setDate(d.getDate() - n * 7)
+  backfillDate.value = ymdLocal(d)
+  backfillPkgId.value = p.id
+}
+function cancelBackfill() { backfillPkgId.value = null; backfillDate.value = '' }
+async function doBackfill(p) {
+  if (!backfillDate.value) { toast('请选择起始日期'); return }
+  try {
+    const r = await api('/api/packages/' + p.id + '/backfill', { method: 'POST', body: { startDate: backfillDate.value } })
+    cancelBackfill()
+    await loadPackages(form.value.id)
+    toast('已回填 ' + r.created + ' 条历史记录')
+  } catch (e) { toast(e.message) }
+}
+
 function toggleWeekday(wd) {
   const a = form.value.weekdays
   const i = a.indexOf(wd)
@@ -120,7 +150,8 @@ async function save() {
   }
   const payload = {
     name: f.name.trim(), color: f.color, defaultStart: f.defaultStart || null,
-    defaultDuration: duration, weekdays: f.weekdays, skipHoliday: f.skipHoliday, trackHours: f.trackHours,
+    defaultDuration: duration, weekdays: f.weekdays, skipHoliday: f.skipHoliday,
+    billMode: f.billMode, defaultFee: f.billMode === 'per_session' && f.defaultFee !== '' ? Number(f.defaultFee) : null,
     note: f.note ? f.note.trim() : ''
   }
   saving.value = true
@@ -168,9 +199,10 @@ function toast(msg) {
     <div v-for="c in courses" :key="c.id" class="item" @click="openEdit(c)">
       <span class="swatch" :style="{ background: c.color }"></span>
       <div class="info">
-        <div class="nm">{{ c.name }}<span v-if="c.trackHours" class="badge">课外班</span></div>
+        <div class="nm">{{ c.name }}<span v-if="billLabel(c)" class="badge">{{ billLabel(c) }}</span></div>
         <div class="meta">{{ c.defaultStart ? '🕐 ' + c.defaultStart + '-' + endOf(c) : '未设默认时间' }}</div>
         <div class="meta">{{ wdText(c) }}</div>
+        <div v-if="c.billMode === 'per_session'" class="meta">💴 单节 {{ c.defaultFee != null ? '¥' + c.defaultFee + '/节' : '未设默认价' }}</div>
         <div v-if="c.note" class="meta note">📝 {{ c.note }}</div>
         <div v-if="c.trackHours" class="hours">
           <template v-if="c.activePackage">
@@ -226,11 +258,28 @@ function toast(msg) {
             <div><b>遇法定假日</b><div class="hint2">开：跳过假日不排课</div></div>
             <div class="switch" :class="{ on: form.skipHoliday }" @click="form.skipHoliday = !form.skipHoliday"></div>
           </div>
-          <div class="switch-row">
-            <div><b>统计课时</b><div class="hint2">课外补习班开启；学校课关闭</div></div>
-            <div class="switch" :class="{ on: form.trackHours }" @click="form.trackHours = !form.trackHours"></div>
+          <label>计费方式 <span class="hint">· 决定如何统计花费</span></label>
+          <div class="bill-pick">
+            <div class="bm" :class="{ on: form.billMode === 'package' }" @click="form.billMode = 'package'">课时包</div>
+            <div class="bm" :class="{ on: form.billMode === 'per_session' }" @click="form.billMode = 'per_session'">单节付费</div>
+            <div class="bm" :class="{ on: form.billMode === 'none' }" @click="form.billMode = 'none'">不计费</div>
           </div>
-          <div v-if="form.trackHours" class="pkg-wrap">
+          <div class="hint2">
+            <template v-if="form.billMode === 'package'">预付课时包，到课扣课时，按平均单价计花费</template>
+            <template v-else-if="form.billMode === 'per_session'">一节一结算，每节记录价格，可设默认价自动带出</template>
+            <template v-else>学校课或免费，不计入花费统计</template>
+          </div>
+
+          <div v-if="form.billMode === 'per_session'" class="fee-wrap">
+            <label>单节默认价 <span class="hint">· 选填，录课自动带出，可单独改</span></label>
+            <div class="fee-input">
+              <span class="yuan">¥</span>
+              <input v-model="form.defaultFee" type="number" min="0" step="1" placeholder="如 150" />
+              <span class="unit">元/节</span>
+            </div>
+          </div>
+
+          <div v-if="form.billMode === 'package'" class="pkg-wrap">
             <label>课时包 <span class="hint">· 循环统计，旧包自动归档</span></label>
             <div v-if="isNew || !form.id" class="pkg-note">保存课程后可添加课时包</div>
             <template v-else>
@@ -260,6 +309,19 @@ function toast(msg) {
                   </div>
                   <div class="pinfo">{{ p.date || '未填日期' }} · 已上 {{ p.used }}/{{ p.total }}<b v-if="p.status === 'active'" class="rem"> · 剩 {{ p.remaining }} 课时</b></div>
                   <div v-if="p.amount != null" class="pinfo">💰 {{ p.amount }} 元 · 平均 {{ avgPrice(p) }} 元/课时</div>
+                  <!-- 历史回填：把期初已上节数展开为可编辑的过往记录 -->
+                  <template v-if="p.openingUsed > 0">
+                    <button v-if="backfillPkgId !== p.id" class="pbackfill" @click="startBackfill(p)">📅 回填历史 {{ Math.floor(p.openingUsed) }} 节到日历</button>
+                    <div v-else class="bf-panel">
+                      <div class="bf-tip">按「上课星期」从起始日依次补 {{ Math.floor(p.openingUsed) }} 条到课记录，跳过法定假日；补完期初已上归零，每条记录可在日历里逐条编辑。</div>
+                      <label class="pl">起始日期</label>
+                      <input type="date" v-model="backfillDate" />
+                      <div class="pacts">
+                        <button class="pghost" @click="cancelBackfill">取消</button>
+                        <button class="pprimary" @click="doBackfill(p)">确认回填</button>
+                      </div>
+                    </div>
+                  </template>
                 </template>
               </div>
               <div v-if="!packages.length" class="pkg-note">还没有课时包</div>
@@ -321,6 +383,17 @@ input:focus, textarea:focus { border-color: var(--primary); }
 .switch.on { background: var(--primary); }
 .switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: .2s; }
 .switch.on::after { left: 23px; }
+/* 计费方式三选一 */
+.bill-pick { display: flex; gap: 6px; }
+.bm { flex: 1; text-align: center; padding: 10px 0; border-radius: 10px; background: var(--card); border: 1px solid var(--line); font-size: 13px; font-weight: 600; color: var(--text-sub); cursor: pointer; }
+.bm.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+/* 单节默认价输入 */
+.fee-wrap { margin-top: 4px; }
+.fee-input { display: flex; align-items: center; gap: 8px; }
+.fee-input .yuan { font-size: 16px; font-weight: 700; color: var(--text-sub); }
+.fee-input input { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 14px; background: var(--card); outline: none; }
+.fee-input input:focus { border-color: var(--primary); }
+.fee-input .unit { font-size: 13px; color: var(--text-sub); white-space: nowrap; }
 .pkg-note { margin-top: 10px; font-size: 13px; color: var(--text-sub); background: var(--card); padding: 12px; border-radius: 10px; }
 /* 列表卡片课时进度 */
 .hours { margin-top: 7px; }
@@ -352,6 +425,11 @@ input:focus, textarea:focus { border-color: var(--primary); }
 .pghost { flex: 1; padding: 9px; border-radius: 9px; background: var(--bg); color: var(--text-sub); font-weight: 600; }
 .pprimary { flex: 1; padding: 9px; border-radius: 9px; background: var(--primary); color: #fff; font-weight: 700; }
 .add-pkg { width: 100%; margin-top: 10px; padding: 12px; border-radius: 11px; background: var(--primary-soft); color: var(--primary); font-weight: 700; }
+/* 历史回填 */
+.pbackfill { margin-top: 10px; width: 100%; padding: 9px; border-radius: 9px; background: var(--bg); color: var(--primary); font-weight: 600; font-size: 13px; border: 1px dashed var(--primary); }
+.bf-panel { margin-top: 10px; padding: 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); }
+.bf-tip { font-size: 12px; color: var(--text-sub); line-height: 1.5; margin-bottom: 10px; }
+.bf-panel input[type=date] { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 9px; font-size: 14px; outline: none; background: var(--card); }
 .actions { display: flex; gap: 10px; margin-top: 22px; }
 .del { padding: 13px; border-radius: 12px; background: #fdecea; color: #e8694a; font-weight: 700; }
 .ghost { flex: 1; padding: 13px; border-radius: 12px; background: var(--card); color: var(--text-sub); font-weight: 600; border: 1px solid var(--line); }

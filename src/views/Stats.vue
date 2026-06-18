@@ -7,7 +7,8 @@ const courses = ref([])
 const courseMap = computed(() => Object.fromEntries(courses.value.map(c => [c.id, c])))
 const records = ref([])
 const range = ref('month')         // week | month
-const spend = ref({ total: 0, hours: 0, rows: [] })
+const pkgPrice = ref({})           // 课时包 id → 平均单价(元/课时)
+const purchased = ref(0)           // 累计已购买课时包金额(元，不分周月)
 const today = new Date()
 
 onMounted(load)
@@ -15,7 +16,7 @@ async function load() {
   courses.value = await api('/api/courses')
   const m = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0')
   records.value = await api('/api/records?month=' + m)
-  await loadSpend()
+  await loadPackagesInfo()
 }
 
 // 本周日期集合（周一起始）
@@ -57,18 +58,37 @@ const attendance = computed(() => {
   return Object.entries(c).map(([k, v]) => ({ key: k, label: STATUS[k], pct: Math.round(v / total * 100), color: k === 'attended' ? '#1aa463' : k === 'leave' ? '#e8694a' : '#d99214' }))
 })
 
-// 花费（累计，按课时包金额）
-async function loadSpend() {
-  let total = 0, hours = 0; const rows = []
-  for (const c of courses.value.filter(c => c.trackHours)) {
+// 拉取课时包信息：构建「课时包 id → 平均单价」映射，并汇总累计已购买金额
+async function loadPackagesInfo() {
+  const price = {}; let bought = 0
+  for (const c of courses.value.filter(c => c.billMode === 'package')) {
     const pkgs = await api('/api/courses/' + c.id + '/packages')
-    const amt = pkgs.reduce((s, p) => s + (p.amount || 0), 0)
-    const tot = pkgs.reduce((s, p) => s + (p.amount != null ? p.total : 0), 0)
-    if (amt > 0) { total += amt; hours += tot; rows.push({ name: c.name, color: c.color, amt }) }
+    for (const p of pkgs) {
+      if (p.amount != null && p.total) price[p.id] = p.amount / p.total   // 平均单价 = 金额 ÷ 总课时
+      bought += p.amount || 0
+    }
   }
-  spend.value = { total, hours, rows }
+  pkgPrice.value = price; purchased.value = bought
 }
-const maxSpend = computed(() => Math.max(1, ...spend.value.rows.map(r => r.amt)))
+
+// 区间实际花费（按到课记录统一折算）：
+//   单节付费 → 本节 fee；课时包 → 本节扣课时 × 该包平均单价
+const periodSpend = computed(() => {
+  let total = 0; const byCourse = {}
+  for (const r of attended.value) {
+    const c = courseMap.value[r.courseId]
+    if (!c) continue
+    let cost = 0
+    if (c.billMode === 'per_session') cost = r.fee != null ? r.fee : 0
+    else if (c.billMode === 'package' && r.packageId) cost = (r.consumedHours || 0) * (pkgPrice.value[r.packageId] || 0)
+    if (cost > 0) { total += cost; byCourse[r.courseId] = (byCourse[r.courseId] || 0) + cost }
+  }
+  const rows = Object.entries(byCourse)
+    .map(([id, amt]) => ({ course: courseMap.value[id], amt: Math.round(amt) }))
+    .filter(r => r.course).sort((a, b) => b.amt - a.amt)
+  return { total: Math.round(total), rows }
+})
+const maxSpend = computed(() => Math.max(1, ...periodSpend.value.rows.map(r => r.amt)))
 </script>
 
 <template>
@@ -104,19 +124,17 @@ const maxSpend = computed(() => Math.max(1, ...spend.value.rows.map(r => r.amt))
     </div>
 
     <div class="section">
-      <h3>花费统计 <span class="hint">· 仅课外班·累计</span></h3>
-      <div v-if="!spend.rows.length" class="empty">还没有带金额的课时包</div>
-      <template v-else>
-        <div class="cards" style="margin: 0 0 14px;">
-          <div class="card"><div class="n sm">{{ spend.total }}</div><div class="l">累计花费(元)</div></div>
-          <div class="card"><div class="n">{{ spend.hours ? Math.round(spend.total / spend.hours) : 0 }}</div><div class="l">平均元/课时</div></div>
-          <div class="card"><div class="n">{{ spend.rows.length }}</div><div class="l">报班学科</div></div>
-        </div>
-        <div v-for="r in spend.rows" :key="r.name" class="bar-row">
-          <div class="name">{{ r.name }}</div>
-          <div class="track"><div class="fill" :style="{ width: Math.round(r.amt / maxSpend * 100) + '%', background: r.color }">{{ r.amt }}元</div></div>
-        </div>
-      </template>
+      <h3>花费统计 <span class="hint">· 本{{ range === 'week' ? '周' : '月' }}实际消费</span></h3>
+      <div class="cards" style="margin: 0 0 14px;">
+        <div class="card"><div class="n sm">{{ periodSpend.total }}</div><div class="l">本{{ range === 'week' ? '周' : '月' }}花费(元)</div></div>
+        <div class="card"><div class="n sm">{{ purchased }}</div><div class="l">累计已购课包(元)</div></div>
+        <div class="card"><div class="n">{{ periodSpend.rows.length }}</div><div class="l">产生花费学科</div></div>
+      </div>
+      <div v-if="!periodSpend.rows.length" class="empty">本{{ range === 'week' ? '周' : '月' }}还没有产生花费的到课记录</div>
+      <div v-for="r in periodSpend.rows" :key="r.course.id" class="bar-row">
+        <div class="name">{{ r.course.name }}</div>
+        <div class="track"><div class="fill" :style="{ width: Math.round(r.amt / maxSpend * 100) + '%', background: r.course.color }">{{ r.amt }}元</div></div>
+      </div>
     </div>
   </div>
 </template>

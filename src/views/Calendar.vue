@@ -182,7 +182,7 @@ function dayTitle(key) {
 // ---------- 记录表单 ----------
 function openAdd() {
   editingId.value = null
-  rform.value = { courseId: null, startTime: '', endTime: '', status: 'attended', consumedHours: 1, note: '' }
+  rform.value = { courseId: null, startTime: '', endTime: '', status: 'attended', consumedHours: 1, fee: '', note: '' }
   courseQuery.value = ''
   editingPhotos.value = []
   pendingFiles.value = []
@@ -190,7 +190,7 @@ function openAdd() {
 }
 function openEdit(r) {
   editingId.value = r.id
-  rform.value = { courseId: r.courseId, startTime: r.startTime || '', endTime: r.endTime || '', status: r.status, consumedHours: r.consumedHours != null ? r.consumedHours : 1, note: r.note || '' }
+  rform.value = { courseId: r.courseId, startTime: r.startTime || '', endTime: r.endTime || '', status: r.status, consumedHours: r.consumedHours != null ? r.consumedHours : 1, fee: r.fee != null ? r.fee : '', note: r.note || '' }
   courseQuery.value = courseMap.value[r.courseId] ? courseMap.value[r.courseId].name : ''
   editingPhotos.value = [...(r.photos || [])]
   pendingFiles.value = []
@@ -210,6 +210,8 @@ function pickCourse(c) {
   courseQuery.value = c.name
   showDrop.value = false
   if (c.defaultStart) { rform.value.startTime = c.defaultStart; rform.value.endTime = addMin(c.defaultStart, c.defaultDuration || 60) }
+  // 单节付费：自动带出课程单节默认价（可改）
+  if (c.billMode === 'per_session') rform.value.fee = c.defaultFee != null ? c.defaultFee : ''
 }
 async function createCourse(name) {
   try {
@@ -222,7 +224,7 @@ async function createCourse(name) {
 async function saveRecord() {
   const f = rform.value
   if (!f.courseId) { toast('请选择或创建课程'); return }
-  const payload = { date: selDate.value, courseId: f.courseId, startTime: f.startTime || null, endTime: f.endTime || null, status: f.status, consumedHours: f.consumedHours, note: f.note || null }
+  const payload = { date: selDate.value, courseId: f.courseId, startTime: f.startTime || null, endTime: f.endTime || null, status: f.status, consumedHours: f.consumedHours, fee: f.fee === '' ? null : Number(f.fee), note: f.note || null }
   try {
     let recordId = editingId.value
     if (recordId) await api('/api/records/' + recordId, { method: 'PUT', body: payload })
@@ -372,6 +374,9 @@ function toast(msg) { toastMsg.value = msg; clearTimeout(toastTimer); toastTimer
               <span v-if="r.startTime">🕐 {{ r.startTime }}-{{ r.endTime }}</span>
               <span v-if="durMin(r.startTime, r.endTime) > 0">⏱ {{ durMin(r.startTime, r.endTime) }}分钟</span>
               <span v-if="r.packageId">扣 {{ r.consumedHours }} 课时</span>
+              <span v-if="r.seq != null">第 {{ r.seq }}/{{ r.seqTotal }} 节</span>
+              <span v-if="r.fee != null">💴 ¥{{ r.fee }}</span>
+              <span v-else-if="r.cost != null">💴 ≈¥{{ r.cost }}<small>（均价）</small></span>
             </div>
             <div v-if="r.note" class="rnote">{{ r.note }}</div>
             <div v-if="r.photos && r.photos.length" class="rphotos">
@@ -417,6 +422,14 @@ function toast(msg) { toastMsg.value = msg; clearTimeout(toastTimer); toastTimer
               <span>{{ rform.consumedHours }}</span>
               <button @click="rform.consumedHours += 0.5">＋</button>
               <span class="hint">课时（请假/调课不扣）</span>
+            </div>
+          </div>
+          <div v-if="selectedCourse?.billMode === 'per_session' && rform.status === 'attended'">
+            <label>本节价格 <span class="hint">· 默认带出课程单节价，可改（请假/调课不计费）</span></label>
+            <div class="fee-input">
+              <span class="yuan">¥</span>
+              <input v-model="rform.fee" type="number" min="0" step="1" placeholder="无花费可留空" />
+              <span class="unit">元</span>
             </div>
           </div>
           <label>备注</label>
@@ -538,6 +551,11 @@ input:focus, textarea:focus { border-color: var(--primary); }
 .statuspick { display: flex; gap: 8px; }
 .statuspick button { flex: 1; padding: 10px; border-radius: 10px; font-size: 13px; font-weight: 600; border: 1px solid var(--line); background: var(--card); color: var(--text-sub); }
 .statuspick button.on { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+.fee-input { display: flex; align-items: center; gap: 8px; }
+.fee-input .yuan { font-size: 16px; font-weight: 700; color: var(--text-sub); }
+.fee-input input { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 14px; background: var(--card); outline: none; }
+.fee-input input:focus { border-color: var(--primary); }
+.fee-input .unit { font-size: 13px; color: var(--text-sub); white-space: nowrap; }
 .step { display: flex; align-items: center; gap: 14px; }
 .step button { width: 34px; height: 34px; border-radius: 9px; background: var(--card); font-size: 20px; font-weight: 700; color: var(--primary); border: 1px solid var(--line); }
 .step > span:first-of-type { font-size: 16px; font-weight: 700; min-width: 28px; text-align: center; }

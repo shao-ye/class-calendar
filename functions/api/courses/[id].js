@@ -1,5 +1,5 @@
 import { json, readJson } from '../../utils/http.js'
-import { weekdaysToStr } from '../../utils/course.js'
+import { weekdaysToStr, normalizeBillMode } from '../../utils/course.js'
 
 // PUT /api/courses/:id —— 更新课程
 export async function onRequestPut({ env, data, request, params }) {
@@ -11,13 +11,17 @@ export async function onRequestPut({ env, data, request, params }) {
   const own = await env.DB.prepare('SELECT id FROM courses WHERE id = ? AND user_id = ?').bind(id, data.uid).first()
   if (!own) return json({ error: '课程不存在' }, 404)
 
+  // 计费方式：优先用 billMode；兼容老客户端只传 trackHours 的情况
+  const billMode = normalizeBillMode(b.billMode != null ? b.billMode : (b.trackHours ? 'package' : 'none'))
+  const trackHours = billMode === 'package' ? 1 : 0
+  const defaultFee = billMode === 'per_session' && b.defaultFee != null && b.defaultFee !== '' ? Number(b.defaultFee) : null
   try {
     await env.DB.prepare(
-      `UPDATE courses SET name=?, color=?, default_start=?, default_duration=?, weekdays=?, skip_holiday=?, track_hours=?, note=?
+      `UPDATE courses SET name=?, color=?, default_start=?, default_duration=?, weekdays=?, skip_holiday=?, track_hours=?, bill_mode=?, default_fee=?, note=?
        WHERE id=? AND user_id=?`
     ).bind(
       b.name.trim(), b.color || '#3b6cff', b.defaultStart || null, b.defaultDuration || 60,
-      weekdaysToStr(b.weekdays), b.skipHoliday ? 1 : 0, b.trackHours ? 1 : 0,
+      weekdaysToStr(b.weekdays), b.skipHoliday ? 1 : 0, trackHours, billMode, defaultFee,
       b.note && b.note.trim() ? b.note.trim() : null, id, data.uid
     ).run()
     return json({ ok: true })

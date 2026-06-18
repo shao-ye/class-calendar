@@ -1,5 +1,5 @@
 import { json, readJson } from '../utils/http.js'
-import { toRecord, calcDuration, activePackageId } from '../utils/record.js'
+import { toRecord, calcDuration, activePackageId, resolveFee, recordCost, recordSeq } from '../utils/record.js'
 
 // GET /api/records?month=YYYY-MM 或 ?date=YYYY-MM-DD —— 取月/日的上课记录
 export async function onRequestGet({ env, data, request }) {
@@ -12,10 +12,13 @@ export async function onRequestGet({ env, data, request }) {
     const rows = (await env.DB.prepare('SELECT * FROM records WHERE user_id = ? AND date = ? ORDER BY start_time, id')
       .bind(data.uid, date).all()).results
     const recs = rows.map(toRecord)
-    // 按日查询时附带照片 id 列表（供当日抽屉展示缩略图）
+    // 按日查询时附带照片 id 列表（供当日抽屉展示缩略图）+ 本节花费（供详情展示）
     for (const rec of recs) {
       const ph = (await env.DB.prepare('SELECT id FROM photos WHERE record_id = ? ORDER BY id').bind(rec.id).all()).results
       rec.photos = ph.map(p => p.id)
+      rec.cost = await recordCost(env, rec)
+      const sq = await recordSeq(env, rec)
+      if (sq) { rec.seq = sq.seq; rec.seqTotal = sq.total }
     }
     return json(recs)
   } else if (month) {
@@ -35,7 +38,7 @@ export async function onRequestPost({ env, data, request }) {
   const b = await readJson(request)
   if (!b.date || !b.courseId) return json({ error: '缺少日期或课程' }, 400)
 
-  const course = await env.DB.prepare('SELECT id, track_hours FROM courses WHERE id = ? AND user_id = ?')
+  const course = await env.DB.prepare('SELECT id, track_hours, bill_mode, default_fee FROM courses WHERE id = ? AND user_id = ?')
     .bind(b.courseId, data.uid).first()
   if (!course) return json({ error: '课程不存在' }, 404)
 
@@ -46,10 +49,12 @@ export async function onRequestPost({ env, data, request }) {
     packageId = await activePackageId(env, course.id)
     consumed = b.consumedHours != null ? Number(b.consumedHours) : 1
   }
+  // 单节付费且到课：本节花费取传入值，未传则回落课程单节默认价（请假/调课不计费）
+  const fee = resolveFee(course, status, b.fee)
 
   const r = await env.DB.prepare(
-    `INSERT INTO records (user_id, date, course_id, start_time, end_time, duration, status, package_id, consumed_hours, note)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(data.uid, b.date, course.id, b.startTime || null, b.endTime || null, duration, status, packageId, consumed, b.note || null).run()
+    `INSERT INTO records (user_id, date, course_id, start_time, end_time, duration, status, package_id, consumed_hours, fee, note)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(data.uid, b.date, course.id, b.startTime || null, b.endTime || null, duration, status, packageId, consumed, fee, b.note || null).run()
   return json({ id: r.meta.last_row_id })
 }

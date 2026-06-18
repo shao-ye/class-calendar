@@ -34,7 +34,9 @@ CREATE TABLE IF NOT EXISTS courses (
   default_duration INTEGER DEFAULT 60,          -- 默认时长(分钟)
   weekdays         TEXT,                        -- 上课星期 "2,4"（1=周一…7=周日）
   skip_holiday     INTEGER NOT NULL DEFAULT 1,  -- 遇法定假日是否跳过排课
-  track_hours      INTEGER NOT NULL DEFAULT 0,  -- 是否统计课时（课外班=1）
+  track_hours      INTEGER NOT NULL DEFAULT 0,  -- 是否走课时包（= bill_mode 为 package；保留以兼容既有扣课时/排课逻辑）
+  bill_mode        TEXT NOT NULL DEFAULT 'none',-- 计费方式：package 课时包 / per_session 单节付费 / none 不计费
+  default_fee      REAL,                        -- 单节默认价（仅单节付费用，可空，录入记录时自动带出）
   note             TEXT,                        -- 课程备注（如上课地点、老师、注意事项等）
   is_active        INTEGER NOT NULL DEFAULT 1,
   created_at       TEXT NOT NULL DEFAULT (datetime('now')),
@@ -68,6 +70,7 @@ CREATE TABLE IF NOT EXISTS records (
   status         TEXT NOT NULL DEFAULT 'attended', -- attended/leave/reschedule
   package_id     INTEGER,                      -- 扣减的课时包
   consumed_hours REAL DEFAULT 1,               -- 本节扣减课时
+  fee            REAL,                          -- 本节实际花费（仅单节付费写入；课时包按平均单价折算，不存此列）
   note           TEXT,
   created_at     TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at     TEXT NOT NULL DEFAULT (datetime('now')),
