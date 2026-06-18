@@ -372,7 +372,7 @@ function toast(msg) { toastMsg.value = msg; clearTimeout(toastTimer); toastTimer
             </div>
             <div class="rmeta">
               <span v-if="r.startTime">🕐 {{ r.startTime }}-{{ r.endTime }}</span>
-              <span v-else-if="durMin(r.startTime, r.endTime) > 0">{{ durMin(r.startTime, r.endTime) }}分钟</span>
+              <span v-if="durMin(r.startTime, r.endTime) > 0">{{ durMin(r.startTime, r.endTime) }}分钟</span>
               <span v-if="r.packageId">扣{{ r.consumedHours }}课时</span>
               <span v-if="r.seq != null">第{{ r.seq }}/{{ r.seqTotal }}节</span>
               <span v-if="r.fee != null">💴¥{{ r.fee }}</span>
