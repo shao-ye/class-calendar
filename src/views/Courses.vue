@@ -105,26 +105,21 @@ async function delPkg(id) {
 function avgPrice(p) { return p.amount != null && p.total ? Math.round(p.amount / p.total) : null }
 
 // ---------- 历史回填 ----------
-const backfillPkgId = ref(null)   // 正在回填的课时包 id
-const backfillDate = ref('')      // 回填起始日期
+const backfillPkgId = ref(null)   // 正在回填确认中的课时包 id
 
 // 本地日期 → YYYY-MM-DD
 function ymdLocal(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') }
 
-// 打开回填面板：默认起始日按"今天往前约 N 周"预填，可改
+// 打开回填确认面板（全自动：从今天往前补，无需选起始日）
 function startBackfill(p) {
   if (!form.value.weekdays || !form.value.weekdays.length) { toast('请先设置上课星期并保存课程'); return }
-  const n = Math.floor(p.openingUsed || 0)
-  const d = new Date(); d.setDate(d.getDate() - n * 7)
-  backfillDate.value = ymdLocal(d)
   backfillPkgId.value = p.id
 }
-function cancelBackfill() { backfillPkgId.value = null; backfillDate.value = '' }
+function cancelBackfill() { backfillPkgId.value = null }
 async function doBackfill(p) {
-  if (!backfillDate.value) { toast('请选择起始日期'); return }
   try {
-    // maxDate 传本地"今天"，确保只回填到今天为止，不生成未来记录
-    const r = await api('/api/packages/' + p.id + '/backfill', { method: 'POST', body: { startDate: backfillDate.value, maxDate: ymdLocal(new Date()) } })
+    // maxDate 传本地"今天"，回填只到今天为止、从今天往前取最近的空白上课日
+    const r = await api('/api/packages/' + p.id + '/backfill', { method: 'POST', body: { maxDate: ymdLocal(new Date()) } })
     cancelBackfill()
     await loadPackages(form.value.id)
     toast(r.remaining > 0 ? `已回填 ${r.created} 条；剩 ${r.remaining} 节无历史空位，仍记在期初已用` : `已回填 ${r.created} 条历史记录`)
@@ -314,9 +309,7 @@ function toast(msg) {
                   <template v-if="p.openingUsed > 0">
                     <button v-if="backfillPkgId !== p.id" class="pbackfill" @click="startBackfill(p)">📅 回填历史 {{ Math.floor(p.openingUsed) }} 节到日历</button>
                     <div v-else class="bf-panel">
-                      <div class="bf-tip">按「上课星期」从起始日依次补到课记录（最多 {{ Math.floor(p.openingUsed) }} 条），只补到今天为止、跳过法定假日与已有记录日；排不下的余量仍留在期初已用。每条记录可在日历里逐条编辑。</div>
-                      <label class="pl">起始日期</label>
-                      <input type="date" v-model="backfillDate" />
+                      <div class="bf-tip">按「上课星期」<b>从今天往前</b>，把还没排进日历的 {{ Math.floor(p.openingUsed) }} 节自动补到最近的空白上课日（跳过法定假日与已有记录日，不生成未来记录）。可重复执行：会先清除上次自动补的、再按当前记录重算，与你手动增删的课保持一致。</div>
                       <div class="pacts">
                         <button class="pghost" @click="cancelBackfill">取消</button>
                         <button class="pprimary" @click="doBackfill(p)">确认回填</button>
