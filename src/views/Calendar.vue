@@ -14,6 +14,7 @@ const viewYear = ref(today.getFullYear())
 const viewMonth = ref(today.getMonth())   // 0-based
 const view = ref('month')                  // month | week
 const records = ref([])
+const todayRecs = ref([])
 const toastMsg = ref('')
 
 // 当日抽屉与记录表单
@@ -50,8 +51,11 @@ async function loadMonth() {
   const m = viewYear.value + '-' + String(viewMonth.value + 1).padStart(2, '0')
   try { records.value = await api('/api/records?month=' + m) } catch (e) { toast(e.message) }
 }
+async function loadToday() {
+  try { todayRecs.value = await api('/api/records?date=' + todayKey) } catch (e) { toast(e.message) }
+}
 onMounted(async () => {
-  await loadCourses(); await loadMonth()
+  await loadCourses(); await loadMonth(); await loadToday()
   loadHolidays(today.getFullYear()); loadHolidays(today.getFullYear() + 1)
 })
 
@@ -139,6 +143,7 @@ function dayItemsDetailed(key) {
 
 // 当日的计划课（尚未记录的预排课程），供抽屉展示与“确认到课”
 const dayPlanned = computed(() => (plannedByDate.value[selDate.value] || []).map(id => courseMap.value[id]).filter(Boolean))
+const todayPlanned = computed(() => (plannedByDate.value[todayKey] || []).map(id => courseMap.value[id]).filter(Boolean))
 
 // 一键确认到课：把计划课转成真实记录（套用课程默认时间，到课扣课时）
 async function confirmPlanned(c) {
@@ -148,7 +153,12 @@ async function confirmPlanned(c) {
     endTime: c.defaultStart ? addMin(c.defaultStart, c.defaultDuration || 60) : null,
     status: 'attended', consumedHours: 1, note: null
   }
-  try { await api('/api/records', { method: 'POST', body: payload }); await loadMonth(); await loadDay(); toast('已确认到课') }
+  try {
+    await api('/api/records', { method: 'POST', body: payload })
+    await loadMonth(); await loadDay()
+    if (selDate.value === todayKey) await loadToday()
+    toast('已确认到课')
+  }
   catch (e) { toast(e.message) }
 }
 // 以计划课为基础打开编辑表单（可改时间/状态/备注后保存）
@@ -234,12 +244,18 @@ async function saveRecord() {
     pendingFiles.value = []
     formOpen.value = false
     await loadMonth(); await loadDay()
+    if (selDate.value === todayKey) await loadToday()
     toast('已保存')
   } catch (e) { toast(e.message) }
 }
 async function deleteRecord(r) {
   if (!confirm('删除这条记录？')) return
-  try { await api('/api/records/' + r.id, { method: 'DELETE' }); await loadMonth(); await loadDay(); toast('已删除') } catch (e) { toast(e.message) }
+  try {
+    await api('/api/records/' + r.id, { method: 'DELETE' })
+    await loadMonth(); await loadDay()
+    if (selDate.value === todayKey) await loadToday()
+    toast('已删除')
+  } catch (e) { toast(e.message) }
 }
 
 // ---------- 照片 ----------
@@ -351,6 +367,46 @@ function toast(msg) { toastMsg.value = msg; clearTimeout(toastTimer); toastTimer
         </div>
       </div>
     </template>
+
+    <!-- 今日课程默认展示；原有日期点击抽屉逻辑保持不变 -->
+    <section class="today-panel">
+      <div class="today-panel-head">
+        <div>
+          <div class="today-panel-title">今日课程</div>
+          <div class="today-panel-date">{{ dayTitle(todayKey) }}</div>
+        </div>
+        <span class="today-panel-count">{{ todayRecs.length + todayPlanned.length }} 节</span>
+      </div>
+
+      <div v-for="r in todayRecs" :key="'today-' + r.id" class="rec today-rec">
+        <div class="rtop">
+          <span class="bar" :style="{ background: courseMap[r.courseId]?.color }"></span>
+          <span class="rnm">{{ courseMap[r.courseId]?.name }}</span>
+          <span class="st" :class="'st-' + r.status">{{ STATUS[r.status] }}</span>
+        </div>
+        <div class="rmeta">
+          <span v-if="r.startTime">🕒 {{ r.startTime }}-{{ r.endTime }}</span>
+          <span v-if="durMin(r.startTime, r.endTime) > 0">{{ durMin(r.startTime, r.endTime) }}分钟</span>
+          <span v-if="r.packageId">扣 {{ r.consumedHours }} 课时</span>
+          <span v-if="r.fee != null">¥{{ r.fee }}</span>
+          <span v-else-if="r.cost != null">约 ¥{{ r.cost }}</span>
+        </div>
+        <div v-if="r.note" class="rnote">{{ r.note }}</div>
+      </div>
+
+      <div v-for="c in todayPlanned" :key="'today-plan-' + c.id" class="rec plan today-rec">
+        <div class="rtop">
+          <span class="bar" :style="{ background: c.color }"></span>
+          <span class="rnm">{{ c.name }}</span>
+          <span class="st st-plan">计划课</span>
+        </div>
+        <div v-if="c.defaultStart" class="rmeta">
+          <span>🕒 {{ c.defaultStart }}-{{ addMin(c.defaultStart, c.defaultDuration || 60) }}</span>
+        </div>
+      </div>
+
+      <div v-if="!todayRecs.length && !todayPlanned.length" class="today-empty">今天还没有课程安排</div>
+    </section>
 
     <!-- 浮动新增（记录今天） -->
     <button class="fab" @click="openDay(todayKey)">＋</button>
@@ -504,6 +560,14 @@ function toast(msg) { toastMsg.value = msg; clearTimeout(toastTimer); toastTimer
 .wv-item .tm { margin-left: auto; color: var(--text-sub); font-size: 12px; }
 .planmark { font-size: 10px; color: var(--primary); background: var(--primary-soft); padding: 0 5px; border-radius: 5px; margin-left: 6px; font-weight: 600; }
 .wv-hol { font-size: 10px; color: #f0876b; background: #fff1ee; padding: 0 6px; border-radius: 5px; margin-left: 8px; font-weight: 700; }
+.today-panel { margin: 0 12px 18px; padding: 14px; background: var(--card); border-radius: 16px; box-shadow: 0 2px 10px rgba(20, 35, 70, .05); }
+.today-panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.today-panel-title { font-size: 16px; font-weight: 700; }
+.today-panel-date { margin-top: 2px; font-size: 11px; color: var(--text-sub); }
+.today-panel-count { padding: 3px 9px; border-radius: 10px; background: var(--primary-soft); color: var(--primary); font-size: 11px; font-weight: 700; }
+.today-rec { margin-bottom: 8px; background: var(--bg); }
+.today-rec:last-child { margin-bottom: 0; }
+.today-empty { padding: 18px 0 10px; text-align: center; color: var(--text-sub); font-size: 13px; }
 .fab { position: fixed; left: 50%; margin-left: 140px; bottom: 84px; width: 54px; height: 54px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 30px; box-shadow: 0 8px 20px rgba(59,108,255,.4); z-index: 25; border: none; }
 
 .mask { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 40; display: flex; align-items: flex-end; justify-content: center; }
