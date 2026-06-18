@@ -372,11 +372,11 @@ function toast(msg) { toastMsg.value = msg; clearTimeout(toastTimer); toastTimer
             </div>
             <div class="rmeta">
               <span v-if="r.startTime">🕐 {{ r.startTime }}-{{ r.endTime }}</span>
-              <span v-if="durMin(r.startTime, r.endTime) > 0">⏱ {{ durMin(r.startTime, r.endTime) }}分钟</span>
-              <span v-if="r.packageId">扣 {{ r.consumedHours }} 课时</span>
-              <span v-if="r.seq != null">第 {{ r.seq }}/{{ r.seqTotal }} 节</span>
-              <span v-if="r.fee != null">💴 ¥{{ r.fee }}</span>
-              <span v-else-if="r.cost != null">💴 ≈¥{{ r.cost }}<small>（均价）</small></span>
+              <span v-else-if="durMin(r.startTime, r.endTime) > 0">{{ durMin(r.startTime, r.endTime) }}分钟</span>
+              <span v-if="r.packageId">扣{{ r.consumedHours }}课时</span>
+              <span v-if="r.seq != null">第{{ r.seq }}/{{ r.seqTotal }}节</span>
+              <span v-if="r.fee != null">💴¥{{ r.fee }}</span>
+              <span v-else-if="r.cost != null">💴≈¥{{ r.cost }}</span>
             </div>
             <div v-if="r.note" class="rnote">{{ r.note }}</div>
             <div v-if="r.photos && r.photos.length" class="rphotos">
@@ -526,7 +526,7 @@ function toast(msg) { toastMsg.value = msg; clearTimeout(toastTimer); toastTimer
 .rops .confirm { color: var(--primary); font-weight: 700; }
 .rops { margin-left: auto; display: flex; gap: 10px; }
 .rops button { font-size: 13px; color: var(--text-sub); background: none; border: none; }
-.rmeta { font-size: 12px; color: var(--text-sub); margin-top: 6px; display: flex; gap: 14px; flex-wrap: wrap; }
+.rmeta { font-size: 12px; color: var(--text-sub); margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap; }
 .rnote { font-size: 13px; margin-top: 8px; color: #4b5159; line-height: 1.5; }
 .rphotos { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
 .thumb { width: 54px; height: 54px; border-radius: 8px; object-fit: cover; }
