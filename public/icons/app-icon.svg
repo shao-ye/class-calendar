@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">课程小日历</title>
+  <desc id="desc">蓝色日历、书本和完成标记组成的应用图标</desc>
+  <defs>
+    <linearGradient id="background" x1="72" y1="48" x2="440" y2="464" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6D8CFF"/>
+      <stop offset="1" stop-color="#3B5FE8"/>
+    </linearGradient>
+    <linearGradient id="book" x1="160" y1="314" x2="354" y2="424" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF8F4"/>
+      <stop offset="1" stop-color="#E9EEFF"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#background)"/>
+  <circle cx="408" cy="104" r="64" fill="#91A8FF" opacity=".5"/>
+  <circle cx="90" cy="414" r="86" fill="#2F51D3" opacity=".45"/>
+
+  <rect x="118" y="105" width="276" height="268" rx="42" fill="#FFFFFF"/>
+  <path d="M118 147c0-23.2 18.8-42 42-42h192c23.2 0 42 18.8 42 42v52H118v-52Z" fill="#DDE5FF"/>
+  <rect x="174" y="79" width="28" height="74" rx="14" fill="#FFFFFF"/>
+  <rect x="310" y="79" width="28" height="74" rx="14" fill="#FFFFFF"/>
+
+  <rect x="158" y="231" width="48" height="42" rx="12" fill="#DDE5FF"/>
+  <rect x="232" y="231" width="48" height="42" rx="12" fill="#DDE5FF"/>
+  <rect x="306" y="231" width="48" height="42" rx="12" fill="#DDE5FF"/>
+  <rect x="158" y="292" width="48" height="42" rx="12" fill="#DDE5FF"/>
+  <rect x="232" y="292" width="48" height="42" rx="12" fill="#DDE5FF"/>
+
+  <path d="M155 331c36-16 70-12 101 14v93c-31-24-65-29-101-14v-93Z" fill="url(#book)"/>
+  <path d="M357 331c-36-16-70-12-101 14v93c31-24 65-29 101-14v-93Z" fill="url(#book)"/>
+  <path d="M256 345v93" stroke="#C8D4FF" stroke-width="8" stroke-linecap="round"/>
+
+  <circle cx="353" cy="321" r="58" fill="#FF826B"/>
+  <path d="m326 321 18 18 37-42" fill="none" stroke="#FFFFFF" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
