@@ -515,7 +515,7 @@ function toast(msg) { toastMsg.value = msg; clearTimeout(toastTimer); toastTimer
 </template>
 
 <style scoped>
-.wrap { min-height: 100vh; padding-bottom: 80px; }
+.wrap { width: 100%; max-width: 100%; min-height: 100vh; padding-bottom: 80px; overflow-x: hidden; }
 .topbar { background: var(--card); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10; }
 .title { font-size: 18px; font-weight: 700; }
 .sub { font-size: 12px; color: var(--text-sub); }
@@ -527,19 +527,19 @@ function toast(msg) { toastMsg.value = msg; clearTimeout(toastTimer); toastTimer
 .nav { display: flex; gap: 8px; align-items: center; }
 .nav button { width: 32px; height: 32px; border-radius: 8px; background: var(--card); font-size: 16px; color: var(--text-sub); box-shadow: 0 1px 4px rgba(0,0,0,.06); border: none; }
 .todaybtn { font-size: 12px; color: var(--primary); font-weight: 600; background: var(--primary-soft) !important; width: auto !important; padding: 0 10px; }
-.weekrow { display: grid; grid-template-columns: repeat(7, 1fr); padding: 6px 8px 0; }
+.weekrow { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding: 6px 8px 0; }
 .weekrow span { text-align: center; font-size: 12px; color: var(--text-sub); font-weight: 600; }
 .weekrow span.we { color: #f0876b; }
-.grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 6px 8px 12px; }
-.cell { position: relative; background: var(--card); border-radius: 10px; min-height: 62px; padding: 5px 4px; }
+.grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; width: 100%; padding: 6px 8px 12px; }
+.cell { position: relative; min-width: 0; min-height: 62px; padding: 5px 3px; overflow: hidden; background: var(--card); border-radius: 10px; }
 .cell.out { background: transparent; }
 .cell.holiday { background: #fff6f4; }
 .cell.holiday.out { background: transparent; }
 .hol { position: absolute; top: 4px; left: 4px; font-size: 9px; color: #f0876b; font-weight: 700; }
 .dnum { font-size: 12px; font-weight: 600; text-align: center; margin-bottom: 2px; }
 .cell.today .dnum { background: var(--primary); color: #fff; border-radius: 50%; width: 20px; height: 20px; line-height: 20px; margin: 0 auto 2px; }
-.tag { font-size: 10px; line-height: 1.4; color: #fff; border-radius: 4px; padding: 1px 4px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tag.plan { background: transparent !important; border: 1px dashed; padding: 0 3px; }
+.tag { display: block; width: 100%; min-width: 0; font-size: 9px; line-height: 1.4; color: #fff; border-radius: 4px; padding: 1px 2px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tag.plan { background: transparent !important; border: 1px dashed; padding: 0 2px; }
 .more { font-size: 9px; color: var(--text-sub); text-align: center; }
 .legend { display: flex; flex-wrap: wrap; gap: 14px; padding: 2px 14px 14px; font-size: 11px; color: var(--text-sub); }
 .legend span { display: flex; align-items: center; gap: 5px; }
@@ -568,7 +568,7 @@ function toast(msg) { toastMsg.value = msg; clearTimeout(toastTimer); toastTimer
 .today-rec { margin-bottom: 8px; background: var(--bg); }
 .today-rec:last-child { margin-bottom: 0; }
 .today-empty { padding: 18px 0 10px; text-align: center; color: var(--text-sub); font-size: 13px; }
-.fab { position: fixed; left: 50%; margin-left: 140px; bottom: 84px; width: 54px; height: 54px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 30px; box-shadow: 0 8px 20px rgba(59,108,255,.4); z-index: 25; border: none; }
+.fab { position: fixed; right: calc(max((100vw - 420px) / 2, 0px) + 14px); bottom: 84px; width: 54px; height: 54px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 30px; box-shadow: 0 8px 20px rgba(59,108,255,.4); z-index: 25; border: none; }
 
 .mask { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 40; display: flex; align-items: flex-end; justify-content: center; }
 .sheet { width: 100%; max-width: 420px; background: var(--bg); border-radius: 20px 20px 0 0; max-height: 92vh; overflow-y: auto; }
@@ -627,4 +627,12 @@ input:focus, textarea:focus { border-color: var(--primary); }
 .ghost { flex: 1; padding: 13px; border-radius: 12px; background: var(--card); color: var(--text-sub); font-weight: 600; border: 1px solid var(--line); }
 .primary { flex: 2; padding: 13px; border-radius: 12px; background: var(--primary); color: #fff; font-weight: 700; border: none; }
 .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: rgba(0,0,0,.8); color: #fff; font-size: 13px; padding: 9px 16px; border-radius: 20px; z-index: 80; }
+
+@media (max-width: 380px) {
+  .weekrow { padding-right: 6px; padding-left: 6px; }
+  .grid { gap: 3px; padding-right: 6px; padding-left: 6px; }
+  .cell { padding-right: 2px; padding-left: 2px; border-radius: 8px; }
+  .tag { padding-right: 1px; padding-left: 1px; font-size: 8px; }
+  .legend { gap: 10px; padding-right: 10px; padding-left: 10px; }
+}
 </style>

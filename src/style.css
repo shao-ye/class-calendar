@@ -10,9 +10,9 @@
   --shadow:0 6px 24px rgba(0,0,0,.08);
 }
 *{box-sizing:border-box;}
-html,body{margin:0;padding:0;background:#dfe3ea;color:var(--text);
+html,body{width:100%;max-width:100%;margin:0;padding:0;overflow-x:hidden;background:#dfe3ea;color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;}
-#app{max-width:420px;min-height:100vh;margin:0 auto;background:var(--bg);
+#app{width:100%;max-width:420px;min-height:100vh;margin:0 auto;overflow-x:hidden;background:var(--bg);
   box-shadow:0 0 40px rgba(0,0,0,.12);}
 button{font-family:inherit;cursor:pointer;border:none;background:none;}
 input{font-family:inherit;}
